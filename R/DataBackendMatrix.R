@@ -14,9 +14,14 @@
 #'
 #' * `data` :: [Matrix::Matrix()].
 #'
+#' * `dense` :: [data.frame()]\cr
+#'   Data frame of additional variables which are not sparse.
+#'   Must have the same number of rows as `data`.
+#'
 #' * `primary_key` :: `character(1)`\cr
-#'   Not supported by this backend. Rows are addresses by their [rownames()].
-#'   If the matrix does not have row names, integer row indices are used.
+#'   Name of the primary key column.
+#'   Must be a column name of the provided `dense` data part,
+#'   or will be automatically constructed from the rownames of `data`.
 #'
 #' Alternatively, use [as_data_backend] on a [Matrix::Matrix()].
 #'
@@ -35,21 +40,42 @@
 #' rownames(data) = paste0("row_", 1:10)
 #'
 #' b = as_data_backend(data)
+#' expect_backend(b)
+#' b$missings(b$rownames, b$colnames)
 #' b$head()
 #' b$data(b$rownames[1:3], b$colnames, data_format = "Matrix")
 DataBackendMatrix = R6Class("DataBackendMatrix", inherit = DataBackend, cloneable = FALSE,
   public = list(
-    initialize = function(data, primary_key = NULL) {
+    initialize = function(data, dense = NULL, primary_key = NULL) {
       require_namespaces("Matrix")
       assert_class(data, "Matrix")
-      assert_names(colnames(data), type = "unique")
-      if (!is.null(rownames(data)))
-        assert_names(rownames(data), type = "unique")
       if (any(dim(data) == 0L))
         stopf("No data in Matrix")
-      if (!is.null(primary_key))
-        stopf("Primary key column not supported by DataBackendMatrix")
-      super$initialize(data, "..row_id", c("data.table", "Matrix"))
+      assert_names(colnames(data), type = "unique")
+
+      if (is.null(rownames(data))) {
+        rn = seq_row(data)
+      } else {
+        rn = assert_names(rownames(data), type = "unique")
+        rownames(data) = NULL
+      }
+
+      if (is.null(dense)) {
+        dense = data.table()
+      } else {
+        assert_data_frame(dense, nrow = nrow(data), min.cols = 1L)
+        dense = as.data.table(dense)
+        assert_names(names(dense), disjunct.from = colnames(data))
+      }
+
+      if (is.null(primary_key)) {
+        primary_key = "..row_id"
+        dense = ref_cbind(dense, data.table(..row_id = rn))
+      } else {
+        assert_choice(primary_key, names(dense))
+      }
+      setkeyv(dense, primary_key, physical = FALSE)
+      super$initialize(data = list(sparse = data, dense = dense), "..row_id", c("data.table", "Matrix"))
     },
 
     data = function(rows, cols, data_format = "data.table") {
@@ -58,67 +84,66 @@ DataBackendMatrix = R6Class("DataBackendMatrix", inherit = DataBackend, cloneabl
       assert_names(cols, type = "unique")
 
       query_rows = private$.translate_rows(rows)
-      query_cols = intersect(cols, colnames(private$.data))
-      data = private$.data[query_rows, query_cols, drop = FALSE]
+      query_cols = intersect(cols, c(colnames(private$.data$dense), colnames(private$.data$sparse)))
+      # data = private$.data[query_rows, query_cols, drop = FALSE]
+
+      dense = private$.data$dense[query_rows, intersect(query_cols, colnames(private$.data$dense)), with = FALSE]
+      sparse = private$.data$sparse[query_rows, intersect(query_cols, colnames(private$.data$sparse)), drop = FALSE]
 
       switch(data_format,
-        "data.table" = {
-          data = as.data.table(as.matrix(data))
-          if (self$primary_key %in% cols)
-            data = insert_named(data, set_names(list(query_rows), self$primary_key))
-          data
-        },
-        "Matrix" = {
-          attr(data, "..row_id") = query_rows
-          data
-        }
+        "data.table" = ref_cbind(dense, as.data.table(as.matrix(sparse))),
+        "Matrix" = list(dense = dense, sparse = sparse)
       )
     },
 
     head = function(n = 6L) {
-      self$data(head(self$rownames, n), self$colnames)
+      self$data(head(self$rownames, n), self$colnames, data_format = "data.table")
     },
 
     distinct = function(rows, cols) {
-      query_cols = intersect(cols, colnames(private$.data))
-      query_rows = if (is.null(rows)) self$rownames else private$.translate_rows(rows)
+      ii = if (is.null(rows)) self$rownames else private$.translate_rows(rows)
 
-      res = set_names(lapply(query_cols, function(col) distinct(private$.data[query_rows, col])), query_cols)
+      cols_dense = setdiff(intersect(cols, colnames(private$.data$dense)), self$primary_key)
+      cols_sparse = intersect(cols, colnames(private$.data$sparse))
 
-      if (self$primary_key %in% cols) {
-        res[[self$primary_key]] = query_rows
-        res = res[match(cols, names(res), nomatch = 0L)]
-      }
-      res
+      pk = if (self$primary_key %in% cols) set_names(list(self$rownames[ii]), self$primary_key) else NULL
+      dense = set_names(lapply(cols_dense, function(col) distinct(private$.data$dense[ii, col, with = FALSE][[1L]])), cols_dense)
+      sparse = set_names(lapply(cols_sparse, function(col) distinct(private$.data$sparse[ii, col])), cols_sparse)
+
+      res = c(pk, dense, sparse)
+      res[match(cols, names(res), nomatch = 0L)]
     },
 
     missings = function(rows, cols) {
-      query_rows = private$.translate_rows(rows)
-      query_cols = intersect(cols, colnames(private$.data))
-      res = apply(private$.data[query_rows, query_cols], 2L, function(x) sum(is.na(x)))
-      if (self$primary_key %in% cols) {
-        res[self$primary_key] = 0L
-        res = res[match(cols, names(res), nomatch = 0L)]
-      }
-      res
+      ii = private$.translate_rows(rows)
+
+      cols_dense = setdiff(intersect(cols, colnames(private$.data$dense)), self$primary_key)
+      cols_sparse = intersect(cols, colnames(private$.data$sparse))
+
+      pk = if (self$primary_key %in% cols) set_names(0L, self$primary_key) else NULL
+      dense = set_names(map_int(cols_dense, function(col) private$.data$dense[ii, sum(is.na(col)), with = FALSE][[1L]]), cols_dense)
+      sparse = apply(private$.data$sparse[ii, cols_sparse, drop = FALSE], 2L, function(x) sum(is.na(x)))
+
+      res = c(pk, dense, sparse)
+      res[match(cols, names(res), nomatch = 0L)]
     }
   ),
 
   active = list(
     rownames = function() {
-      rownames(private$.data) %??% seq_row(private$.data)
+      private$.data$dense[[self$primary_key]]
     },
 
     colnames = function() {
-      c(self$primary_key, colnames(private$.data))
+      c(colnames(private$.data$dense), colnames(private$.data$sparse))
     },
 
     nrow = function() {
-      nrow(private$.data)
+      nrow(private$.data$dense)
     },
 
     ncol = function() {
-      ncol(private$.data) + 1L
+      ncol(private$.data$dense) + ncol(private$.data$sparse)
     }
   ),
 
@@ -128,16 +153,13 @@ DataBackendMatrix = R6Class("DataBackendMatrix", inherit = DataBackend, cloneabl
     },
 
     .translate_rows = function(rows) {
-      rn = rownames(private$.data)
-      if (is.null(rn))
-        return(filter_oob_index(rows, 1L, self$nrow))
-      assert_character(rows)
-      intersect(rows, rn)
+      ii = set_names(list(rows), self$primary_key)
+      private$.data$dense[ii, nomatch = 0L, on = self$primary_key, which = TRUE]
     }
   )
 )
 
 #' @export
-as_data_backend.Matrix = function(data, ...) {
-  DataBackendMatrix$new(data)
+as_data_backend.Matrix = function(data, dense = NULL, primary_key = NULL, ...) {
+  DataBackendMatrix$new(data, dense = dense, primary_key = primary_key)
 }
