@@ -1,0 +1,14 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: mllg/mlr3
+    steps:
+      - run:
+          name: Check package
+          no_output_timeout: 60m
+          command: |
+            R -q -e 'update.packages()'
+            R CMD build .
+            R CMD INSTALL mlr3_*.tar.gz
+            R CMD check --as-cran mlr3_*.tar.gz
