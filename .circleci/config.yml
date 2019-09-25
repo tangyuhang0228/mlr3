@@ -9,5 +9,4 @@ jobs:
           name: Check package
           no_output_timeout: 60m
           command: |
-            ls -al
-            rcc.r --as-cran -f
+            r-cmd-check
