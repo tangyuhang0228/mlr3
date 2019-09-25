@@ -10,7 +10,4 @@ jobs:
           no_output_timeout: 60m
           command: |
             ls -al
-            R -q -e 'update.packages()'
-            R CMD build .
-            R CMD INSTALL mlr3_*.tar.gz
-            R CMD check --as-cran mlr3_*.tar.gz
+            rcc.r --as-cran -f
