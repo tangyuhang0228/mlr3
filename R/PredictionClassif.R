@@ -16,6 +16,7 @@
 #' If this object is constructed manually, make sure that the factor levels for `truth`
 #' have the same levels as the task, in the same order.
 #' In case of binary classification tasks, the positive class label must be the first level.
+#' If no truth is available, create a factor with NAs as elements, but set the factor levels nevertheless.
 #'
 #' @section Construction:
 #' ```
@@ -111,7 +112,7 @@ PredictionClassif = R6Class("PredictionClassif", inherit = Prediction,
       row_ids = assert_row_ids(row_ids)
       n = length(row_ids)
 
-      truth = assert_factor(truth, len = n, null.ok = TRUE)
+      truth = assert_factor(truth, len = n, null.ok = FALSE)
       lvls = levels(truth)
 
       if (!is.null(response)) {
@@ -122,6 +123,9 @@ PredictionClassif = R6Class("PredictionClassif", inherit = Prediction,
         assert_matrix(prob, nrows = n, ncols = length(lvls))
         assert_numeric(prob, lower = 0, upper = 1)
         assert_names(colnames(prob), permutation.of = lvls)
+        if (!identical(lvls, colnames(prob))) {
+          prob = prob[, lvls, drop = FALSE]
+        }
         if (!is.null(rownames(prob))) {
           rownames(prob) = NULL
         }
@@ -147,18 +151,18 @@ PredictionClassif = R6Class("PredictionClassif", inherit = Prediction,
       open_help("mlr3::PredictionClassif")
     },
 
-    set_threshold = function(threshold) {
+    set_threshold = function(threshold, ties_method = "random") {
       if (!is.matrix(self$data$prob)) {
         stopf("Cannot set threshold, no probabilities available")
       }
-      lvls = colnames(self$data$prob)
+      lvls = levels(self$truth)
 
       if (length(threshold) == 1L) {
-        assert_number(threshold, lower = 0, upper = 1)
+        assert_number(threshold)
         if (length(lvls) != 2L) {
           stopf("Setting a single threshold only supported for binary classification problems")
         }
-        prob = cbind(self$data$prob[, 1L], threshold)
+        prob = cbind(self$data$prob[, lvls[1L]], threshold)
       } else {
         assert_numeric(threshold, any.missing = FALSE, lower = 0, upper = 1, len = length(lvls))
         assert_names(names(threshold), permutation.of = lvls)
@@ -169,7 +173,7 @@ PredictionClassif = R6Class("PredictionClassif", inherit = Prediction,
         prob = self$data$prob %*% diag(w)
       }
 
-      ind = max.col(prob, ties.method = "random")
+      ind = max.col(prob, ties.method = ties_method)
       self$data$tab$response = factor(lvls[ind], levels = lvls)
       invisible(self)
     }
@@ -239,4 +243,52 @@ c.PredictionClassif = function(..., keep_duplicates = TRUE) {
   }
 
   PredictionClassif$new(row_ids = tab$row_id, truth = tab$truth, response = tab$response, prob = prob)
+}
+
+
+if (FALSE) {
+  tune_threshold = function(prediction, measure = NULL, method = "exact", repeats = 50L) {
+    measure = assert_measure(as_measure(measure, task_type = prediction$task_type))
+    assert_prediction(prediction)
+    assert_choice(method, choices = c("exact", "optimize"))
+
+    f = function(th) {
+      prediction$set_threshold(th, ties_method = "last")
+      measure$score(prediction)
+    }
+
+    if (method == "exact") {
+      threshold = c(-Inf, sort(unique(prediction$prob[, levels(prediction$truth)[1L]])), Inf)
+      score = map_dbl(threshold, f)
+      ii = if (measure$minimize) which_min(score) else which_max(score)
+      list(threshold = threshold[ii], score = score[ii])
+    } else {
+      grid = seq(from = 0, to = 1, length.out = repeats)
+      maximum = !measure$minimize
+      best = optimize(f = f, lower = 0, upper = 1, maximum = maximum)
+      if (repeats > 1L) {
+        mult = ifelse(maximum, -1, 1)
+        grid = seq(0, 1, length.out = repeats - 1L)
+        for (j in seq_len(length(grid) - 1L)) {
+          res = optimize(f = f, lower = grid[j], upper = grid[j + 1L], maximum = maximum)
+          if (mult * res$objective < mult * best$objective)
+            best = res
+        }
+      }
+
+      list(threshold = best$minimum, score = best$objective)
+    }
+  }
+
+  library(mlr3learners)
+  task = tsk("sonar")
+  lrn = lrn("classif.featureless", predict_type = "prob")
+  prediction = lrn$train(task)$predict(task)
+  prediction$response
+  prediction$prob
+  tune_threshold(prediction, method = "exact")
+  tune_threshold(prediction, method = "optimize")
+
+  measure = msr("classif.ce")
+  measure$score(prediction)
 }

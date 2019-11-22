@@ -16,6 +16,7 @@ probability is chosen. In case of ties, a label is selected randomly.
 If this object is constructed manually, make sure that the factor levels for \code{truth}
 have the same levels as the task, in the same order.
 In case of binary classification tasks, the positive class label must be the first level.
+If no truth is available, create a factor with NAs as elements, but set the factor levels nevertheless.
 }
 \section{Construction}{
 \preformatted{p = PredictionClassif$new(task = NULL, row_ids = task$row_ids, truth = task$truth(), response = NULL, prob = NULL)
