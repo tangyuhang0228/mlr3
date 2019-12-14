@@ -247,10 +247,13 @@ c.PredictionClassif = function(..., keep_duplicates = TRUE) {
 
 
 if (FALSE) {
-  tune_threshold = function(prediction, measure = NULL, method = "exact", repeats = 50L) {
+  tune_threshold = function(prediction, measure = NULL, method = "auto", repeats = 50L) {
     measure = assert_measure(as_measure(measure, task_type = prediction$task_type))
     assert_prediction(prediction)
-    assert_choice(method, choices = c("exact", "optimize"))
+    assert_choice(method, choices = c("auto", "exact", "optimize"))
+    if (method == "auto") {
+      method = if (length(prediction$truth) <= 10000L) "exact" else "optimize"
+    }
 
     f = function(th) {
       prediction$set_threshold(th, ties_method = "last")
@@ -258,7 +261,7 @@ if (FALSE) {
     }
 
     if (method == "exact") {
-      threshold = c(-Inf, sort(unique(prediction$prob[, levels(prediction$truth)[1L]])), Inf)
+      threshold = c(-Inf, unique(prediction$prob[, levels(prediction$truth)[1L]]), Inf)
       score = map_dbl(threshold, f)
       ii = if (measure$minimize) which_min(score) else which_max(score)
       list(threshold = threshold[ii], score = score[ii])
@@ -282,13 +285,17 @@ if (FALSE) {
 
   library(mlr3learners)
   task = tsk("sonar")
-  lrn = lrn("classif.featureless", predict_type = "prob")
+  lrn = lrn("classif.ranger", predict_type = "prob")
   prediction = lrn$train(task)$predict(task)
   prediction$response
   prediction$prob
+  profvis::profvis(
   tune_threshold(prediction, method = "exact")
+  )
   tune_threshold(prediction, method = "optimize")
+  tune_threshold(prediction, method = "auto")
 
-  measure = msr("classif.ce")
-  measure$score(prediction)
+
+  task = tgen("xor")$generate(10000)
+  prediction = lrn$train(task)$predict(task)
 }
