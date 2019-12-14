@@ -1,12 +1,19 @@
+# mlr3 0.1.6
+
+* We have published an article about mlr3 in the Journal of Open Source
+  Software: <https://joss.theoj.org/papers/10.21105/joss.01903>.
+  See `citation("mlr3")` for the citation info.
+* Fix ordering of levels in `PredictionClassif$set_threshold()` (triggered an
+  assertion).
+
 # mlr3 0.1.5
 
-* Switched from package `Metrics` to package `mlr3measures` for the
-  implementation of performance measures.
+* Switched from package `Metrics` to package `mlr3measures`.
 * Measures can now calculate all scores using micro or macro averaging (#400).
-* Measures can now return a customizable performance score instead of `NA` if
-  they are not defined for a certain input.
+* Measures can now be configured to return a customizable performance score
+  (instead of `NA`) in case the score cannot be calculated.
 * Character columns are now treated differently from factor columns.
-  In the long term, these are supposed to store text.
+  In the long term, `character()` columns are supposed to store text.
 * Fixed a bug triggered by integer grouping variables in `Task` (#396).
 * `benchmark_grid()` now accepts instantiated resamplings under certain
   conditions.
