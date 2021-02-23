@@ -3,7 +3,9 @@
 \name{mlr_tasks_sonar}
 \alias{mlr_tasks_sonar}
 \title{Sonar Classification Task}
-\format{\link[R6:R6Class]{R6::R6Class} inheriting from \link{TaskClassif}.}
+\format{
+\link[R6:R6Class]{R6::R6Class} inheriting from \link{TaskClassif}.
+}
 \description{
 A classification task for the \link[mlbench:Sonar]{mlbench::Sonar} data set.
 Positive class is set to "M" (Mine).
@@ -14,8 +16,39 @@ tsk("sonar")
 }
 }
 
+\section{Meta Information}{
+
+\itemize{
+\item Task type: \dQuote{classif}
+\item Dimensions: 208x61
+\item Properties: \dQuote{twoclass}
+\item Has Missings: \code{FALSE}
+\item Target: \dQuote{Class}
+\item Features: \dQuote{V1}, \dQuote{V10}, \dQuote{V11}, \dQuote{V12}, \dQuote{V13}, \dQuote{V14}, \dQuote{V15}, \dQuote{V16}, \dQuote{V17}, \dQuote{V18}, \dQuote{V19}, \dQuote{V2}, \dQuote{V20}, \dQuote{V21}, \dQuote{V22}, \dQuote{V23}, \dQuote{V24}, \dQuote{V25}, \dQuote{V26}, \dQuote{V27}, \dQuote{V28}, \dQuote{V29}, \dQuote{V3}, \dQuote{V30}, \dQuote{V31}, \dQuote{V32}, \dQuote{V33}, \dQuote{V34}, \dQuote{V35}, \dQuote{V36}, \dQuote{V37}, \dQuote{V38}, \dQuote{V39}, \dQuote{V4}, \dQuote{V40}, \dQuote{V41}, \dQuote{V42}, \dQuote{V43}, \dQuote{V44}, \dQuote{V45}, \dQuote{V46}, \dQuote{V47}, \dQuote{V48}, \dQuote{V49}, \dQuote{V5}, \dQuote{V50}, \dQuote{V51}, \dQuote{V52}, \dQuote{V53}, \dQuote{V54}, \dQuote{V55}, \dQuote{V56}, \dQuote{V57}, \dQuote{V58}, \dQuote{V59}, \dQuote{V6}, \dQuote{V60}, \dQuote{V7}, \dQuote{V8}, \dQuote{V9}
+}
+}
+
 \seealso{
 \link[mlr3misc:Dictionary]{Dictionary} of \link[=Task]{Tasks}: \link{mlr_tasks}
 
 \code{as.data.table(mlr_tasks)} for a complete table of all (also dynamically created) \link[=Task]{Tasks}.
+
+Other Task: 
+\code{\link{TaskClassif}},
+\code{\link{TaskRegr}},
+\code{\link{TaskSupervised}},
+\code{\link{TaskUnsupervised}},
+\code{\link{Task}},
+\code{\link{mlr_tasks_boston_housing}},
+\code{\link{mlr_tasks_breast_cancer}},
+\code{\link{mlr_tasks_german_credit}},
+\code{\link{mlr_tasks_iris}},
+\code{\link{mlr_tasks_mtcars}},
+\code{\link{mlr_tasks_penguins}},
+\code{\link{mlr_tasks_pima}},
+\code{\link{mlr_tasks_spam}},
+\code{\link{mlr_tasks_wine}},
+\code{\link{mlr_tasks_zoo}},
+\code{\link{mlr_tasks}}
 }
+\concept{Task}

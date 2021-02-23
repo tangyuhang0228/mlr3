@@ -1,4 +1,14 @@
-context("Task")
+test_that("Feature columns can be reordered", {
+  bh = load_dataset("BostonHousing", "mlbench")
+  task = tsk("boston_housing")
+  task$col_roles$feature = setdiff(names(bh), "medv")
+
+  expect_equal(task$feature_names, setdiff(names(bh), "medv"))
+  expect_equal(names(task$data(rows = 1)), c("medv", setdiff(names(bh), "medv")))
+
+  task$col_roles$feature = shuffle(task$col_roles$feature)
+  expect_equal(names(task$data(rows = 1)), c("medv", task$col_roles$feature))
+})
 
 test_that("Task duplicates rows", {
   task = tsk("iris")
@@ -23,6 +33,9 @@ test_that("Rows return ordered", {
   x = task$data()
   expect_integer(x$t, sorted = TRUE, any.missing = FALSE)
 
+  x = task$data(ordered = FALSE)
+  expect_true(is.unsorted(x$t))
+
   x = task$data(rows = sample(nrow(data), 50))
   expect_integer(x$t, sorted = TRUE, any.missing = FALSE)
 })
@@ -46,7 +59,7 @@ test_that("Rows return ordered with multiple order cols", {
 
 test_that("Task rbind", {
   task = tsk("iris")
-  expect_error(task$rbind(task), "data.frame")
+  # expect_error(task$rbind(task), "data.frame")
   data = iris[1:10, ]
   task$rbind(iris[1:10, ])
   expect_task(task)
@@ -55,7 +68,7 @@ test_that("Task rbind", {
   task$rbind(iris[integer(), ])
   expect_equal(task$nrow, 160)
 
-  # 185
+  # #185
   task = tsk("iris")
   task$select("Petal.Length")
   task$rbind(task$data())
@@ -63,11 +76,39 @@ test_that("Task rbind", {
 
   task$rbind(data.table())
   expect_equal(task$nrow, 300L)
+
+  # #437
+  task = tsk("zoo")
+  data = task$data()
+  data$foo = 101:1
+  nt = task$clone()$rbind(data)
+  expect_task(nt)
+  expect_set_equal(nt$row_ids, 1:202)
+  expect_equal(nt$row_names$row_name, c(task$row_names$row_name, rep(NA, 101)))
+  expect_equal(nt$col_info[list("foo"), .N, nomatch = NULL], 0L)
+
+  # #423
+  task = tsk("iris")
+  task$row_roles$use = 1:10
+  task$row_roles$validation = 11:150
+
+  task$rbind(iris[sample(nrow(iris), 5), ])
+  expect_set_equal(task$row_ids, c(1:10, 151:155))
+
+  # 496
+  data = iris
+  data$blocks = sample(letters[1:2], nrow(iris), replace = TRUE)
+  task = TaskClassif$new("iris", data, target = "Species")
+  task$col_roles$feature = setdiff(task$col_roles$feature, "blocks")
+  task$col_roles$group = "blocks"
+  learner = lrn("classif.rpart")
+  learner$train(task)
+  expect_prediction(predict(learner, iris, predict_type = "<Prediction>"))
 })
 
 test_that("Task cbind", {
   task = tsk("iris")
-  expect_error(task$cbind(task), "data.frame")
+  # expect_error(task$cbind(task), "data.frame")
   data = cbind(data.frame(foo = 150:1), data.frame(..row_id = task$row_ids))
   task$cbind(data)
   expect_task(task)
@@ -94,6 +135,16 @@ test_that("Task cbind", {
   task$cbind(y)
   expect_equal(task$ncol, 7L)
   expect_disjunct(task$feature_names, task$target_names)
+
+  # cbind to subsetted task
+  task = tsk("iris")$filter(1:120)
+  backend = data.table(x = runif(120))
+  task$cbind(backend)
+
+  # cbind 0-row data (#461)
+  task = tsk("iris")$filter(integer())
+  task$cbind(data.frame(x = integer()))
+  expect_set_equal(c(task$target_names, task$feature_names), c(names(iris), "x"))
 })
 
 test_that("cbind/rbind works", {
@@ -110,11 +161,12 @@ test_that("cbind/rbind works", {
   expect_set_equal(task$row_ids, c(1:150, 201:210))
   expect_data_table(task$data(), ncols = 6, nrows = 160, any.missing = FALSE)
 
-  # auto generate char ids
+  # auto generated ids
   task = tsk("zoo")
-  newdata = task$data("wasp")
+  newdata = task$data(1)
+  newdata$animal = "boy"
   task$rbind(newdata)
-  expect_equal(sum(grepl("^rbind_[0-9a-z]+_1", task$row_ids)), 1L)
+  expect_set_equal(task$row_ids, 1:102)
 })
 
 test_that("filter works", {
@@ -126,6 +178,10 @@ test_that("filter works", {
   expect_equal(task$nrow, 10L)
 
   expect_equal(task$row_ids, 91:100)
+
+  task$filter(91)
+  expect_equal(task$nrow, 1L)
+  expect_data_table(task$data(), nrows = 1L, any.missing = FALSE)
 })
 
 test_that("select works", {
@@ -164,10 +220,21 @@ test_that("stratify works", {
   expect_list(tab$row_id, "integer")
 })
 
+test_that("$uris works", {
+  data = cbind(iris, uri = as.character(1:150))
+  task = TaskClassif$new("uri_test", data, target = "Species")
+  expect_null(task$uris)
+
+  task$set_col_roles("uri", "uri")
+  tab = task$uris
+  expect_data_table(tab, ncols = 2, nrows = 150)
+  expect_names(names(tab), permutation.of = c("row_id", "uri"))
+})
+
 test_that("groups/weights work", {
   b = as_data_backend(data.table(x = runif(20), y = runif(20), w = runif(20), g = sample(letters[1:2], 20, replace = TRUE)))
   task = TaskRegr$new("test", b, target = "y")
-  task$set_row_role(16:20, character())
+  task$set_row_roles(16:20, character())
 
   expect_false("groups" %in% task$properties)
   expect_false("weights" %in% task$properties)
@@ -194,7 +261,11 @@ test_that("groups/weights work", {
 })
 
 test_that("ordered factors (#95)", {
-  df = data.frame(x = c(1, 2, 3), y = factor(letters[1:3], ordered = TRUE), z = c("M", "R", "R"))
+  df = data.frame(
+    x = c(1, 2, 3),
+    y = factor(letters[1:3], levels = letters[1:3], ordered = TRUE),
+    z = factor(c("M", "R", "R"), levels = c("M", "R"))
+  )
   b = as_data_backend(df)
   task = TaskClassif$new(id = "id", backend = b, target = "z")
   expect_subset(c("numeric", "ordered", "factor"), task$col_info$type)
@@ -265,8 +336,55 @@ test_that("col roles getters/setters", {
   task = tsk("iris")
 
   expect_error({ task$col_roles$feature = "foo" })
-  expect_error({ task$col_roles$foo = "Species" })
+
+  # additional roles allowed (#558)
+  task$col_roles$foo = "Species"
 
   task$col_roles$feature = setdiff(task$col_roles$feature, "Sepal.Length")
   expect_false("Sepal.Length" %in% task$feature_names)
+})
+
+test_that("Task$row_names", {
+  task = tsk("mtcars")
+  tab = task$row_names
+  expect_data_table(tab, any.missing = FALSE, ncols = 2, nrows = task$nrow)
+  expect_integer(tab$row_id, unique = TRUE)
+  expect_character(tab$row_name)
+
+  tab = task$filter(1:10)$row_names
+  expect_data_table(tab, any.missing = FALSE, ncols = 2, nrows = task$nrow)
+  expect_integer(tab$row_id, unique = TRUE)
+  expect_character(tab$row_name)
+})
+
+test_that("Task$set_row_roles", {
+  task = tsk("pima")
+
+  task$set_row_roles(1:10, remove_from = "use")
+  expect_true(all(1:10 %nin% task$row_ids))
+
+  task$set_row_roles(1:10, add_to = "use")
+  expect_true(all(1:10 %in% task$row_ids))
+
+  task$set_row_roles(1:10, roles = "validation")
+  expect_true(all(1:10 %nin% task$row_ids))
+})
+
+
+test_that("Task$set_col_roles", {
+  task = tsk("pima")
+
+  task$set_col_roles("mass", remove_from = "feature")
+  expect_true("mass" %nin% task$feature_names)
+
+  task$set_col_roles("mass", add_to = "feature")
+  expect_true("mass" %in% task$feature_names)
+
+  task$set_col_roles("age", roles = "weight")
+  expect_true("age" %nin% task$feature_names)
+  expect_data_table(task$weights)
+
+  task$set_col_roles("age", add_to = "feature", remove_from = "weight")
+  expect_true("age" %in% task$feature_names)
+  expect_null(task$weights)
 })

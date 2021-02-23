@@ -3,9 +3,12 @@
 \name{mlr_tasks_zoo}
 \alias{mlr_tasks_zoo}
 \title{Zoo Classification Task}
-\format{\link[R6:R6Class]{R6::R6Class} inheriting from \link{TaskClassif}.}
+\format{
+\link[R6:R6Class]{R6::R6Class} inheriting from \link{TaskClassif}.
+}
 \description{
 A classification task for the \link[mlbench:Zoo]{mlbench::Zoo} data set.
+Rownames are stored as variable \code{"..rownames"} with column role \code{"name"}.
 }
 \section{Construction}{
 \preformatted{mlr_tasks$get("zoo")
@@ -13,8 +16,39 @@ tsk("zoo")
 }
 }
 
+\section{Meta Information}{
+
+\itemize{
+\item Task type: \dQuote{classif}
+\item Dimensions: 101x17
+\item Properties: \dQuote{multiclass}
+\item Has Missings: \code{FALSE}
+\item Target: \dQuote{type}
+\item Features: \dQuote{airborne}, \dQuote{aquatic}, \dQuote{backbone}, \dQuote{breathes}, \dQuote{catsize}, \dQuote{domestic}, \dQuote{eggs}, \dQuote{feathers}, \dQuote{fins}, \dQuote{hair}, \dQuote{legs}, \dQuote{milk}, \dQuote{predator}, \dQuote{tail}, \dQuote{toothed}, \dQuote{venomous}
+}
+}
+
 \seealso{
 \link[mlr3misc:Dictionary]{Dictionary} of \link[=Task]{Tasks}: \link{mlr_tasks}
 
 \code{as.data.table(mlr_tasks)} for a complete table of all (also dynamically created) \link[=Task]{Tasks}.
+
+Other Task: 
+\code{\link{TaskClassif}},
+\code{\link{TaskRegr}},
+\code{\link{TaskSupervised}},
+\code{\link{TaskUnsupervised}},
+\code{\link{Task}},
+\code{\link{mlr_tasks_boston_housing}},
+\code{\link{mlr_tasks_breast_cancer}},
+\code{\link{mlr_tasks_german_credit}},
+\code{\link{mlr_tasks_iris}},
+\code{\link{mlr_tasks_mtcars}},
+\code{\link{mlr_tasks_penguins}},
+\code{\link{mlr_tasks_pima}},
+\code{\link{mlr_tasks_sonar}},
+\code{\link{mlr_tasks_spam}},
+\code{\link{mlr_tasks_wine}},
+\code{\link{mlr_tasks}}
 }
+\concept{Task}

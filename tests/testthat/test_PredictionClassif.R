@@ -1,5 +1,3 @@
-context("PredictionClassif")
-
 test_that("Construction", {
   task = tsk("iris")
   p = PredictionClassif$new(row_ids = task$row_ids, truth = task$truth(), response = task$truth())
@@ -14,6 +12,9 @@ test_that("Internally constructed Prediction", {
   p = lrn$train(task)$predict(task)
   expect_prediction(p)
   expect_prediction_classif(p, task = task)
+
+  p = PredictionClassif$new(row_ids = task$row_ids, truth = task$truth(), prob = p$prob)
+  expect_set_equal(p$predict_types, c("response", "prob"))
 })
 
 test_that("setting threshold binaryclass", {
@@ -72,6 +73,32 @@ test_that("setting threshold multiclass", {
   expect_equal(as.character(unique(x$response)), task$class_names[1L])
 })
 
+test_that("setting threshold edge cases (#452)", {
+  learner = lrn("classif.rpart", predict_type = "prob")
+  t = tsk("iris")
+  prd = learner$train(t)$predict(t$clone()$filter(c(1, 51, 101)))
+
+  prd$set_threshold(c(setosa = 0, versicolor = 0, virginica = 0), ties_method = "first")
+  expect_equal(as.character(prd$response), c("setosa", "versicolor", "versicolor"))
+  prd$set_threshold(c(setosa = 0, versicolor = 0, virginica = 0), ties_method = "last")
+  expect_equal(as.character(prd$response), c("setosa", "virginica", "virginica"))
+
+  prd$set_threshold(c(setosa = 1, versicolor = 0, virginica = 0), ties_method = "first")
+  expect_equal(as.character(prd$response), c("setosa", "versicolor", "versicolor"))
+  prd$set_threshold(c(setosa = 1, versicolor = 0, virginica = 0), ties_method = "last")
+  expect_equal(as.character(prd$response), c("setosa", "virginica", "virginica"))
+
+  prd$set_threshold(c(setosa = 0, versicolor = 1, virginica = 0), ties_method = "first")
+  expect_equal(as.character(prd$response), c("setosa", "virginica", "virginica"))
+  prd$set_threshold(c(setosa = 0, versicolor = 1, virginica = 0), ties_method = "last")
+  expect_equal(as.character(prd$response), c("setosa", "virginica", "virginica"))
+
+  prd$set_threshold(c(setosa = 0, versicolor = 0, virginica = 1), ties_method = "first")
+  expect_equal(as.character(prd$response), c("setosa", "versicolor", "versicolor"))
+  prd$set_threshold(c(setosa = 0, versicolor = 0, virginica = 1), ties_method = "last")
+  expect_equal(as.character(prd$response), c("setosa", "versicolor", "versicolor"))
+})
+
 test_that("confusion", {
   task = tsk("iris")
   lrn = lrn("classif.featureless")
@@ -101,14 +128,25 @@ test_that("c", {
   expect_equal(sum(conf), 150L)
   expect_equal(rownames(conf), task$class_names)
   expect_equal(colnames(conf), task$class_names)
-  expect_equal(conf, Reduce("+", map(rr$data$prediction, function(x) x$test$confusion)))
+  expect_equal(conf, Reduce("+", map(rr$predictions(), "confusion")))
 
   # duplicates are detected?
-  p1 = rr$data$prediction[[1]]$test
-  p2 = rr$data$prediction[[1]]$test
+  p1 = rr$data$data$fact$prediction[[1]]$test
+  p2 = rr$data$data$fact$prediction[[1]]$test
   p3 = c(p1, p2, keep_duplicates = FALSE)
   expect_equal(sort(p1$data$row_ids), sort(p2$data$row_ids))
   expect_equal(sort(p1$data$row_ids), sort(p3$data$row_ids))
   expect_factor(p3$response, len = length(p1$response), any.missing = FALSE)
   expect_matrix(p3$prob, nrows = nrow(p1$prob), ncols = ncol(p1$prob))
+})
+
+test_that("as_prediction_classif", {
+  task = tsk("penguins")
+  learner = lrn("classif.featureless", method = "weighted.sample")
+  p = learner$train(task)$predict(task)
+
+  tab = as.data.table(p)
+  p2 = as_prediction_classif(tab)
+
+  expect_equal(tab, as.data.table(p2))
 })

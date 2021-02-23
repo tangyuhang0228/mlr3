@@ -1,27 +1,27 @@
 #' @title 2D Normals Classification Task Generator
 #'
-#' @usage NULL
 #' @name mlr_task_generators_2dnormals
-#' @format [R6::R6Class] inheriting from [TaskGenerator].
 #' @include TaskGenerator.R
-#'
-#' @section Construction:
-#' ```
-#' TaskGenerator2DNormals$new()
-#' mlr_task_generators$get("2dnormals")
-#' tgen("2dnormals")
-#' ```
 #'
 #' @description
 #' A [TaskGenerator] for the 2d normals task in [mlbench::mlbench.2dnormals()].
 #'
+#' @templateVar id 2dnormals
+#' @template section_dictionary_task_generator
+#'
 #' @template seealso_task_generator
 #' @export
 #' @examples
-#' tgen("2dnormals")$generate(10)$data()
+#' generator = tgen("2dnormals")
+#' plot(generator, n = 200)
+#'
+#' task = generator$generate(200)
+#' str(task$data())
 TaskGenerator2DNormals = R6Class("TaskGenerator2DNormals",
   inherit = TaskGenerator,
   public = list(
+    #' @description
+    #' Creates a new instance of this [R6][R6::R6Class] class.
     initialize = function() {
       ps = ParamSet$new(list(
         ParamInt$new("cl", lower = 2L),
@@ -30,13 +30,29 @@ TaskGenerator2DNormals = R6Class("TaskGenerator2DNormals",
       ))
 
       super$initialize(id = "2dnormals", "classif", "mlbench", ps, man = "mlr3::mlr_task_generators_2dnormals")
+    },
+
+    #' @description
+    #' Creates a simple plot of generated data.
+    #' @param n (`integer(1)`)\cr
+    #'   Number of samples to draw for the plot. Default is 200.
+    #' @param pch (`integer(1)`)\cr
+    #'   Point char. Passed to [plot()].
+    #' @param ... (any)\cr
+    #'   Additional arguments passed to [plot()].
+    plot = function(n = 200L, pch = 19L, ...) {
+      plot(private$.generate_obj(n), pch = pch, ...)
     }
   ),
 
   private = list(
+    .generate_obj = function(n) {
+      invoke(mlbench::mlbench.2dnormals, n = n, .args = self$param_set$values)
+    },
+
     .generate = function(n) {
-      data = invoke(mlbench::mlbench.2dnormals, n = n, .args = self$param_set$values)
-      TaskClassif$new(sprintf("%s_%i", self$id, n), as.data.frame(data), target = "classes")
+      obj = private$.generate_obj(n)
+      TaskClassif$new(sprintf("%s_%i", self$id, n), convert_mlbench(obj), target = "y")
     }
   )
 )

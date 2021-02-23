@@ -1,29 +1,33 @@
-context("resample")
+task = tsk("iris")
+learner = lrn("classif.featureless")
+resampling = rsmp("cv", folds = 3)
+rr = resample(task, learner, resampling)
 
 test_that("resample", {
-  task = tsk("iris")
-  learner = lrn("classif.featureless")
-  resampling = rsmp("cv", folds = 3L)
-
-  rr = resample(task, learner, resampling)
-
   expect_resample_result(rr)
-  expect_numeric(rr$score(msr("classif.ce"))$classif.ce, any.missing = FALSE)
-  expect_number(rr$aggregate(msr("classif.ce")))
-  expect_different_address(rr$data$learner[[1L]], rr$data$learner[[2L]])
-  expect_same_address(rr$data$task[[1L]], rr$data$task[[2L]])
-  expect_same_address(rr$data$resampling[[1L]], rr$data$resampling[[2L]])
 
-  expect_equal(uniqueN(hashes(rr$data$learner)), 1L)
-  expect_equal(uniqueN(hashes(rr$data$task)), 1L)
-  expect_equal(uniqueN(hashes(rr$data$resampling)), 1L)
+  scores = rr$score(msr("classif.ce"))
+  expect_list(scores$prediction, "Prediction")
+  expect_numeric(scores$classif.ce, any.missing = FALSE)
+  expect_number(rr$aggregate(msr("classif.ce")))
+  learners = rr$learners
+  expect_different_address(learners[[1L]], learners[[2L]])
+  expect_equal(uniqueN(hashes(learners)), 1L)
+
+  rr = rr$clone(TRUE)$filter(2:3)
+  tab = as.data.table(rr)
+  expect_data_table(tab, nrows = 2L)
+  expect_data_table(tab, nrows = 2L)
+  expect_equal(tab$iteration, 2:3)
+  expect_resample_result(rr, allow_incomplete = TRUE)
+})
+
+test_that("empty RR", {
+  rr = ResampleResult$new()
+  expect_resample_result(rr)
 })
 
 test_that("resample with no or multiple measures", {
-  task = tsk("iris")
-  learner = lrn("classif.featureless")
-  rr = resample(task, learner, rsmp("cv", folds = 3))
-
   for (measures in list(mlr_measures$mget(c("classif.ce", "classif.acc")), list())) {
     tab = rr$score(measures, ids = FALSE)
     expect_data_table(tab, ncols = length(mlr_reflections$rr_names) + length(measures), nrows = 3L)
@@ -35,15 +39,11 @@ test_that("resample with no or multiple measures", {
 })
 
 test_that("as_benchmark_result.ResampleResult", {
-  task = tsk("iris")
   measures = list(msr("classif.ce"), msr("classif.acc"))
-  learner = lrn("classif.featureless")
-  resampling = rsmp("cv", folds = 3)
-  rr = resample(task, learner, resampling)
   bmr = as_benchmark_result(rr)
   expect_benchmark_result(bmr)
   expect_equal(nrow(bmr$data), nrow(rr$data))
-  expect_set_equal(bmr$data$uhash, rr$uhash)
+  expect_set_equal(bmr$uhashes, rr$uhash)
   aggr = bmr$aggregate()
   expect_data_table(aggr, nrows = 1)
   expect_set_equal(bmr$uhashes, rr$uhash)
@@ -51,36 +51,19 @@ test_that("as_benchmark_result.ResampleResult", {
 
 
 test_that("discarding model", {
-  task = tsk("iris")
-  learner = lrn("classif.featureless")
-  resampling = rsmp("cv", folds = 3)
-
-  rr = resample(task, learner, resampling)
-  expect_equal(map(rr$data$learner, "model"), vector("list", 3L))
+  expect_equal(map(as.data.table(rr)$learner, "model"), vector("list", 3L))
 })
 
 test_that("inputs are cloned", {
-  task = tsk("iris")
-  learner = lrn("classif.featureless")
-  resampling = rsmp("holdout")
-  resampling$instantiate(task)
-
-  rr = resample(task, learner, resampling)
-  expect_different_address(task, rr$task)
-  expect_different_address(learner, rr$data$learner[[1L]])
-  expect_different_address(resampling, rr$resampling)
+  expect_different_address(task, rr$data$data$tasks$task[[1]])
+  expect_different_address(learner, rr$data$data$learners$learner[[1]])
+  expect_different_address(resampling, rr$data$data$resamplings$resampling[[1]])
 })
 
 test_that("memory footprint", {
-  task = tsk("iris")
-  learner = lrn("classif.featureless")
-  resampling = rsmp("cv", folds = 3)
-  rr = resample(task, learner, resampling)
-  x = rr$data
-
-  expect_equal(uniqueN(map_chr(x$learner, address)), nrow(x))
-  expect_equal(uniqueN(map_chr(x$task, address)), 1L)
-  expect_equal(uniqueN(map_chr(x$resampling, address)), 1L)
+  expect_equal(nrow(rr$data$data$learners), 1L)
+  expect_equal(nrow(rr$data$data$tasks), 1L)
+  expect_equal(nrow(rr$data$data$resamplings), 1L)
 })
 
 test_that("predict_type is checked", {
@@ -92,4 +75,48 @@ test_that("predict_type is checked", {
 
   expect_error(rr$score(measure), "predict_type")
   expect_error(rr$aggregate(measure), "predict_type")
+})
+
+test_that("seeds work identical sequential/parallel", {
+  skip_if_not_installed("future")
+  task = tsk("sonar")
+  learner = lrn("classif.debug", predict_type = "prob")
+  resampling = rsmp("cv", folds = 3L)
+  measure = msr("classif.auc")
+
+  rr1 = with_seed(123, with_future(future::plan("sequential"), resample(task, learner, resampling)))
+  rr2 = with_seed(123, with_future(future::plan("multisession"), resample(task, learner, resampling)))
+
+  expect_equal(
+    as.data.table(rr1$prediction())$prob.M,
+    as.data.table(rr2$prediction())$prob.M
+  )
+})
+
+test_that("empty train/predict sets", {
+  task = tsk("mtcars")
+  learner = lrn("regr.rpart")
+
+  expect_error(learner$train(task, integer()))
+
+  learner$train(task)
+  expect_prediction(learner$predict(task, integer()))
+
+  resampling = rsmp("holdout", ratio = 0)
+  expect_error(resample(task, learner, resampling))
+
+  resampling = rsmp("holdout", ratio = 1)
+  expect_prediction(resample(task, learner, resampling)$predictions()[[1]])
+})
+
+test_that("conditions are returned", {
+  expect_true(all(c("warnings", "errors") %in% names(rr$score(conditions = TRUE))))
+})
+
+test_that("save/load roundtrip", {
+  path = tempfile()
+  saveRDS(rr, file = path)
+
+  rr2 = readRDS(path)
+  expect_resample_result(rr2)
 })

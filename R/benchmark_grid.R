@@ -7,14 +7,14 @@
 #' Resampling strategies are not allowed to be instantiated when passing the argument, and instead will be instantiated per task internally.
 #' The only exception to this rule applies if all tasks have exactly the same number of rows, and the resamplings are all instantiated for such tasks.
 #'
-#' @param tasks :: list of [Task].
-#' @param learners :: list of [Learner].
-#' @param resamplings :: list of [Resampling].
+#' @param tasks (list of [Task]).
+#' @param learners (list of [Learner]).
+#' @param resamplings (list of [Resampling]).
 #'
 #' @return ([data.table::data.table()]) with the cross product of the input vectors.
 #' @export
 #' @examples
-#' tasks = list(tsk("iris"), tsk("sonar"))
+#' tasks = list(tsk("penguins"), tsk("sonar"))
 #' learners = list(lrn("classif.featureless"), lrn("classif.rpart"))
 #' resamplings = list(rsmp("cv"), rsmp("subsampling"))
 #' benchmark_grid(tasks, learners, resamplings)

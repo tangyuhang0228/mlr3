@@ -55,15 +55,15 @@ expect_backend = function(b) {
 
   n = checkmate::expect_count(b$nrow)
   p = checkmate::expect_count(b$ncol)
-  cn = checkmate::expect_atomic_vector(b$colnames, any.missing = FALSE, len = p, unique = TRUE)
-  rn = checkmate::expect_atomic_vector(b$rownames, any.missing = FALSE, len = n, unique = TRUE)
+  cn = checkmate::expect_character(b$colnames, any.missing = FALSE, len = p, unique = TRUE)
+  rn = checkmate::expect_integerish(b$rownames, any.missing = FALSE, len = n, unique = TRUE)
   rn1 = head(rn, 1L)
   pk = b$primary_key
 
   x = b$data(rows = rn, cols = pk, data_format = "data.table")
   checkmate::expect_data_table(x, ncols = 1L, nrows = n, col.names = "unique")
   x = x[[1L]]
-  checkmate::expect_atomic_vector(x, len = n, unique = TRUE)
+  checkmate::expect_integerish(x, len = n, unique = TRUE)
 
   x = b$data(rows = rn, cols = setdiff(cn, pk)[1L], data_format = "data.table")
   checkmate::expect_data_table(x, ncols = 1L, nrows = n, col.names = "unique")
@@ -90,7 +90,12 @@ expect_backend = function(b) {
 
   # rows are duplicated
   x = b$data(rows = rep(rn1, 2L), cols = b$colnames, data_format = "data.table")
-  checkmate::expect_data_table(x, nrows = 2L*length(rn1), ncols = p)
+  checkmate::expect_data_table(x, nrows = 2L * length(rn1), ncols = p)
+
+  # cols are returned in the right order
+  j = rev(cn)
+  x = b$data(rows = rn1, cols = j, data_format = "data.table")
+  testthat::expect_equal(j, colnames(x))
 
   # rows are returned in the right order
   i = sample(rn, min(n, 10L))
@@ -101,13 +106,13 @@ expect_backend = function(b) {
   testthat::expect_error(b$data(rows = rn1, cols = rep(cn[1L], 2L), data_format = "data.table"), "unique")
 
   # $head()
-  checkmate::expect_data_table(b$head(9999L), nrows = n, ncols = p)
+  checkmate::expect_data_table(b$head(.Machine$integer.max), nrows = n, ncols = p)
   checkmate::expect_data_table(b$head(0L), nrows = 0, ncols = p)
   checkmate::expect_data_table(b$head(2L), nrows = min(2L, b$nrow), ncols = p)
 
   # $distinct()
   d = b$distinct(rn, b$primary_key)[[1L]]
-  checkmate::expect_atomic_vector(d, any.missing = FALSE, len = n, unique = TRUE)
+  checkmate::expect_integerish(d, any.missing = FALSE, len = n, unique = TRUE)
   checkmate::expect_list(b$distinct(rn, "_not_existing_"), len = 0L, names = "named")
   d = b$distinct(rn, c("_not_existing_", rev(cn), "_also_not_existing_"))
   checkmate::expect_list(d, names = "unique")
@@ -123,15 +128,15 @@ expect_backend = function(b) {
 
   d = b$distinct(rn, cn, na_rm = FALSE)
   m = b$missings(rn, cn)
-  expect_equal(sapply(d, checkmate::anyMissing), m > 0L)
+  expect_equal(vapply(d, checkmate::anyMissing, FUN.VALUE = logical(1)), m > 0L)
 
   # $missings()
   x = b$missings(b$rownames, b$colnames)
-  checkmate::expect_integer(x, lower = 0L, upper = b$nrow, any.missing = FALSE)
+  checkmate::expect_integerish(x, lower = 0L, upper = b$nrow, any.missing = FALSE)
   checkmate::expect_names(names(x), permutation.of = b$colnames)
-  checkmate::expect_integer(b$missings(b$rownames, "_not_existing_"), len = 0L, names = "named")
-  checkmate::expect_integer(b$missings(b$rownames[0L], b$colnames), len = b$ncol, names = "unique")
-  checkmate::expect_integer(b$missings(b$rownames[0L], "_not_existing_"), len = 0L, names = "unique")
+  checkmate::expect_integerish(b$missings(b$rownames, "_not_existing_"), len = 0L, names = "named")
+  checkmate::expect_integerish(b$missings(b$rownames[0L], b$colnames), len = b$ncol, names = "unique")
+  checkmate::expect_integerish(b$missings(b$rownames[0L], "_not_existing_"), len = 0L, names = "unique")
 
   # $hash
  checkmate::expect_string(b$hash)
@@ -179,21 +184,33 @@ expect_iris_backend = function(b, n_missing = 0L) {
 
   # no missing values
   x = b$missings(b$rownames, b$colnames)
-  checkmate::expect_integer(x, names = "unique", lower = 0L, upper = b$nrow, any.missing = FALSE)
+  checkmate::expect_integerish(x, names = "unique", lower = 0L, upper = b$nrow, any.missing = FALSE)
   checkmate::expect_names(names(x), permutation.of = b$colnames)
-  testthat::expect_identical(sum(x), as.integer(n_missing))
+  testthat::expect_equal(sum(x), n_missing)
 }
 
-expect_task = function(task) {
+expect_task = function(task, null_backend_ok = TRUE) {
   checkmate::expect_r6(task, "Task", cloneable = TRUE, public = c("id", "backend", "task_type", "row_roles", "col_roles", "col_info", "head", "row_ids", "feature_names", "target_names", "formula", "nrow", "ncol", "feature_types"))
   testthat::expect_output(print(task), "Task")
   expect_id(task$id)
   expect_man_exists(task$man)
   checkmate::expect_count(task$nrow)
   checkmate::expect_count(task$ncol)
-  checkmate::expect_data_table(task$data(data_format = "data.table"))
-  if (task$nrow > 0L)
+
+  null_backend = is.null(task$backend)
+  if (!null_backend_ok) {
+    expect_false(is.null(task$backend))
+  }
+
+  if (null_backend) {
+    expect_equal(task$data_formats, character())
+  } else {
+    checkmate::expect_data_table(task$data(data_format = "data.table"))
+  }
+
+  if (task$nrow > 0L && !null_backend) {
     checkmate::expect_data_table(task$head(1), nrows = 1L)
+  }
 
   cols = c("id", "type", "levels")
   checkmate::expect_data_table(task$col_info, key = "id", ncols  = length(cols))
@@ -209,7 +226,7 @@ expect_task = function(task) {
 
   checkmate::expect_list(task$row_roles, names = "unique", types = c("integer", "character"), any.missing = FALSE)
   checkmate::expect_names(names(task$row_roles), permutation.of = mlr3::mlr_reflections$task_row_roles)
-  lapply(task$row_roles, checkmate::expect_atomic_vector, any.missing = FALSE, unique = TRUE)
+  lapply(task$row_roles, checkmate::expect_integerish, any.missing = FALSE, unique = TRUE)
 
   types = task$feature_types
   checkmate::expect_data_table(types, ncols  = 2, nrows  = length(task$feature_names), key = "id")
@@ -223,18 +240,20 @@ expect_task = function(task) {
   checkmate::expect_list(levels, names = "unique")
   checkmate::qassertr(levels, c("0", "S+"))
 
-  missings = task$missings()
-  checkmate::expect_integer(missings, names = "unique", any.missing = FALSE, lower = 0L, upper = task$nrow)
-
   expect_hash(task$hash, 1L)
 
-  # query zero columns
-  data = task$data(cols = character(), data_format = "data.table")
-  checkmate::expect_data_table(data, ncols  = 0L)
+  if (!null_backend) {
+    missings = task$missings()
+    checkmate::expect_integer(missings, names = "unique", any.missing = FALSE, lower = 0L, upper = task$nrow)
 
-  # query zero rows
-  data = task$data(rows = task$row_ids[0L], data_format = "data.table")
-  checkmate::expect_data_table(data, nrows  = 0L)
+    # query zero columns
+    data = task$data(cols = character(), data_format = "data.table")
+    checkmate::expect_data_table(data, ncols  = 0L)
+
+    # query zero rows
+    data = task$data(rows = task$row_ids[0L], data_format = "data.table")
+    checkmate::expect_data_table(data, nrows  = 0L)
+  }
 }
 
 expect_task_supervised = function(task) {
@@ -283,6 +302,7 @@ expect_task_generator = function(gen) {
   checkmate::expect_function(gen$generate, args = "n")
   checkmate::expect_class(gen$param_set, "ParamSet")
   checkmate::expect_list(gen$param_set$values, names = "unique")
+  expect_output(print(gen))
 }
 
 expect_learner = function(lrn, task = NULL) {
@@ -294,9 +314,18 @@ expect_learner = function(lrn, task = NULL) {
   checkmate::expect_choice(lrn$task_type, mlr3::mlr_reflections$task_types$type)
   checkmate::expect_character(lrn$packages, any.missing = FALSE, min.chars = 1L, unique = TRUE)
   checkmate::expect_class(lrn$param_set, "ParamSet")
+  testthat::expect_lte(length(lrn$param_set$ids(tags = "threads")), 1L)
   checkmate::expect_character(lrn$properties, any.missing = FALSE, min.chars = 1L, unique = TRUE)
-  checkmate::expect_function(lrn$train_internal, args = "task", nargs = 1L)
-  checkmate::expect_function(lrn$predict_internal, args = "task", nargs = 1L)
+  if (is.null(private(lrn)$.train)) {
+    checkmate::expect_function(lrn$train_internal, args = "task", nargs = 1L)
+  } else {
+    checkmate::expect_function(private(lrn)$.train, args = "task", nargs = 1L)
+  }
+  if (is.null(private(lrn)$.predict)) {
+    checkmate::expect_function(lrn$predict_internal, args = "task", nargs = 1L)
+  } else {
+    checkmate::expect_function(private(lrn)$.predict, args = "task", nargs = 1L)
+  }
   expect_hash(lrn$hash, 1L)
 
   tags = lrn$param_set$tags
@@ -324,7 +353,7 @@ expect_resampling = function(r, task = NULL) {
     testthat::expect_error(r$train_set(1L), "instantiated")
     testthat::expect_error(r$test_set(1L), "instantiated")
     # testthat::expect_identical(r$hash, NA_character_)
-    if (r$id != "custom")
+    if (!(r$id %in% c("custom", "loo")))
       checkmate::expect_count(r$iters, positive = TRUE)
     testthat::expect_identical(r$task_hash, NA_character_)
   } else {
@@ -340,9 +369,9 @@ expect_resampling = function(r, task = NULL) {
     for (i in seq_len(r$iters)) {
       train = r$train_set(1L)
       test = r$test_set(1L)
-      checkmate::expect_atomic_vector(train, any.missing = FALSE)
-      checkmate::expect_atomic_vector(test, any.missing = FALSE)
-      if (!inherits(r, "ResamplingCustom")) {
+      checkmate::expect_integerish(train, any.missing = FALSE)
+      checkmate::expect_integerish(test, any.missing = FALSE)
+      if (!inherits(r, "ResamplingCustom") && !inherits(r, "ResamplingInsample")) {
         testthat::expect_length(intersect(train, test), 0L)
       }
       if (!is.null(task)) {
@@ -351,12 +380,27 @@ expect_resampling = function(r, task = NULL) {
       }
     }
   }
+
   checkmate::expect_list(r$param_set$values, names = "unique")
   testthat::expect_true(checkmate::qtestr(r$param_set$values, "V1"))
+
+  # check re-instantiation with provided task
+  if (!is.null(task) && !is.null(task$backend) && !inherits(r, "ResamplingCustom")) {
+    r = r$clone()$instantiate(task)
+    expect_subset(r$train_set(1), task$row_ids)
+    expect_subset(r$test_set(1), task$row_ids)
+
+    # again with strata
+    task = task$clone()
+    task$col_roles$stratum = task$target_names
+    r$instantiate(task)
+    expect_subset(r$train_set(1), task$row_ids)
+    expect_subset(r$test_set(1), task$row_ids)
+  }
 }
 
 expect_measure = function(m) {
-  checkmate::expect_r6(m, "Measure", public = c("aggregate", "score", "score_internal", "id", "minimize", "packages", "range", "task_type", "task_properties"))
+  checkmate::expect_r6(m, "Measure", public = c("aggregate", "score", "id", "minimize", "packages", "range", "task_type", "task_properties"))
   expect_id(m$id)
   expect_man_exists(m$man)
   testthat::expect_output(print(m), "Measure")
@@ -367,7 +411,11 @@ expect_measure = function(m) {
   testthat::expect_lt(m$range[1], m$range[2])
   checkmate::expect_flag(m$minimize, na.ok = TRUE)
   checkmate::expect_character(m$packages, min.chars = 1L, any.missing = FALSE, unique = TRUE)
-  checkmate::expect_function(m$score_internal, args = c("prediction", "..."))
+  if (is.null(private(m)$.score)) {
+    checkmate::expect_function(m$score_internal, args = c("prediction", "..."))
+  } else {
+    checkmate::expect_function(private(m)$.score, args = c("prediction", "..."))
+  }
   checkmate::expect_function(m$aggregate, args = "rr")
 }
 
@@ -375,16 +423,19 @@ expect_prediction = function(p) {
   checkmate::expect_r6(p, "Prediction", public = c("row_ids", "truth", "predict_types"))
   testthat::expect_output(print(p), "^<Prediction")
   checkmate::expect_data_table(data.table::as.data.table(p), nrows  = length(p$row_ids))
-  checkmate::expect_atomic_vector(p$missing)
+  checkmate::expect_integerish(p$missing)
 }
 
 expect_prediction_regr = function(p) {
   expect_prediction(p)
-  checkmate::expect_r6(p, "PredictionRegr", public = c("row_ids", "response", "truth", "predict_types", "se"))
+  checkmate::expect_r6(p, "PredictionRegr", public = c("row_ids", "response", "truth", "predict_types", "se", "distr"))
   checkmate::expect_numeric(p$truth, any.missing = TRUE, len = length(p$row_ids), null.ok = TRUE)
   checkmate::expect_numeric(p$response, any.missing = FALSE, len = length(p$row_ids), null.ok = TRUE)
   if ("se" %in% p$predict_types) {
     checkmate::expect_numeric(p$se, any.missing = FALSE, len = length(p$row_ids), lower = 0)
+  }
+  if ("distr" %in% p$predict_types) {
+    checkmate::expect_class(p$distr, "VectorDistribution")
   }
 }
 
@@ -408,35 +459,50 @@ expect_prediction_classif = function(p, task = NULL) {
   }
 }
 
-expect_resample_result = function(rr) {
+expect_resample_result = function(rr, allow_incomplete = FALSE) {
   checkmate::expect_r6(rr, "ResampleResult")
+  expect_resultdata(rr$data, FALSE)
   testthat::expect_output(print(rr), "ResampleResult")
-  expect_task(rr$task)
-  lapply(rr$learners, expect_learner, task = rr$task)
-  expect_resampling(rr$resampling, task = rr$task)
+  nr = rr$data$iterations()
+
+  if (nr > 0L) {
+    expect_task(rr$task, null_backend_ok = is.null(rr$task$backend))
+    expect_learner(rr$learner)
+    lapply(rr$learners, expect_learner, task = rr$task)
+    expect_resampling(rr$resampling, task = rr$task)
+  }
+
+  expected_iters = if (allow_incomplete || nr == 0L) nr else rr$resampling$iters
 
   data = data.table::as.data.table(rr)
-  checkmate::expect_data_table(rr$score(), nrows  = rr$resampling$iters, min.cols = length(mlr3::mlr_reflections$rr_names), any.missing = FALSE)
+  checkmate::expect_data_table(rr$score(), nrows = expected_iters, min.cols = length(mlr3::mlr_reflections$rr_names), any.missing = FALSE)
   checkmate::expect_names(names(rr$score()), must.include = mlr3::mlr_reflections$rr_names)
-  expect_uhash(rr$uhash, 1L)
+  if (nr > 0L) {
+    expect_uhash(rr$uhash, 1L)
+  } else {
+    expect_identical(rr$uhash, NA_character_)
+  }
 
-  m = mlr3::default_measures(rr$task$task_type)[[1L]]
-  y = rr$score(m)
-  aggr = rr$aggregate(m)
-  checkmate::expect_numeric(y[[m$id]], lower = m$range[1], upper = m$range[2], any.missing = FALSE, label = sprintf("measure %s", m$id))
-  checkmate::expect_number(aggr[[m$id]], lower = m$range[1L], upper = m$range[2L], label = sprintf("measure %s", m$id))
+  if (nr > 0L) {
+    m = mlr3::default_measures(rr$task$task_type)[[1L]]
+    y = rr$score(m)
+    aggr = rr$aggregate(m)
+    checkmate::expect_numeric(y[[m$id]], lower = m$range[1], upper = m$range[2], any.missing = FALSE, label = sprintf("measure %s", m$id))
+    checkmate::expect_number(aggr[[m$id]], lower = m$range[1L], upper = m$range[2L], label = sprintf("measure %s", m$id))
+  }
 
-  lapply(rr$data$prediction, checkmate::expect_list, types = "Prediction", names = "unique")
-  expect_prediction(rr$prediction())
-  checkmate::expect_list(rr$predictions(), "Prediction")
+  checkmate::expect_list(rr$predictions(), types = "Prediction", len = expected_iters)
+  if (nr > 0L) {
+    expect_prediction(rr$prediction())
+  }
 }
 
 expect_benchmark_result = function(bmr) {
-  checkmate::expect_r6(bmr, "BenchmarkResult", public = c("data"))
+  checkmate::expect_r6(bmr, "BenchmarkResult", public = "data")
+  expect_resultdata(bmr$data, TRUE)
   testthat::expect_output(print(bmr), "BenchmarkResult")
 
-  checkmate::expect_data_table(bmr$data, min.cols = length(mlr3::mlr_reflections$rr_names) + 1L)
-  checkmate::expect_names(names(bmr$data), must.include = c(mlr3::mlr_reflections$rr_names, "uhash"))
+  checkmate::expect_names(names(as.data.table(bmr)), permutation.of = c(mlr3::mlr_reflections$rr_names, "uhash"))
 
   tab = bmr$tasks
   checkmate::expect_data_table(tab, ncols = 3L)
@@ -444,6 +510,7 @@ expect_benchmark_result = function(bmr) {
   expect_hash(tab$task_hash)
   expect_id(tab$task_id)
   checkmate::expect_list(tab$task, "Task")
+  expect_set_equal(bmr$tasks$task_hash, bmr$data$data$tasks$task_hash)
 
   tab = bmr$learners
   checkmate::expect_data_table(tab, ncols = 3L)
@@ -451,6 +518,7 @@ expect_benchmark_result = function(bmr) {
   expect_hash(tab$learner_hash)
   expect_id(tab$learner_id)
   checkmate::expect_list(tab$learner, "Learner")
+  expect_set_equal(bmr$learners$learner_hash, bmr$data$data$learner_components$learner_hash)
 
   tab = bmr$resamplings
   checkmate::expect_data_table(tab, ncols = 3L)
@@ -458,11 +526,16 @@ expect_benchmark_result = function(bmr) {
   expect_hash(tab$resampling_hash)
   expect_id(tab$resampling_id)
   checkmate::expect_list(tab$resampling, "Resampling")
+  expect_set_equal(bmr$resamplings$resampling_hash, bmr$data$data$resamplings$resampling_hash)
 
-  measures = mlr3::default_measures(bmr$task_type)
+  if (nrow(bmr$data$data$fact) > 0L) {
+    measures = mlr3::default_measures(bmr$task_type)
+  } else {
+    measures = mlr3::msrs("time_both")
+  }
   tab = bmr$aggregate(measures, ids = TRUE)
   checkmate::expect_data_table(tab, min.cols = 5L + length(measures))
-  checkmate::expect_names(names(tab), must.include = c("nr", "resample_result", "resampling_id", "task_id", "learner_id", "resampling_id", mlr3misc::map_chr(measures, "id")))
+  checkmate::expect_names(names(tab), must.include = c("nr", "resample_result", "task_id", "learner_id", "resampling_id", "iters", mlr3misc::map_chr(measures, "id")))
   testthat::expect_equal(tab$nr, seq_len(nrow(tab)))
   checkmate::expect_list(tab$resample_result, "ResampleResult")
   expect_id(tab$task_id)
@@ -473,14 +546,52 @@ expect_benchmark_result = function(bmr) {
     checkmate::expect_numeric(tab[[measure$id]], any.missing = FALSE)
   }
 
-  tab = bmr$aggregate(params = TRUE)
+  tab = bmr$aggregate(measures = measures, params = TRUE)
   checkmate::assert_list(tab$params)
 
   uhashes = bmr$uhashes
-  expect_uhash(uhashes, len = data.table::uniqueN(bmr$data$uhash))
-  checkmate::expect_set_equal(uhashes, bmr$data$uhash)
+  expect_uhash(uhashes, len = length(bmr$data$uhashes()))
+  checkmate::expect_set_equal(uhashes, unique(bmr$data$uhashes()))
+  testthat::expect_equal(bmr$n_resample_results, length(uhashes))
 
-  expect_equal(bmr$n_resample_results, length(bmr$uhashes))
+  tab = bmr$resample_results
+  expect_data_table(tab, ncols = 3L, nrows = bmr$n_resample_results, any.missing = FALSE)
+  expect_character(tab$uhash, any.missing = FALSE)
+  expect_integer(tab$nr, sorted = TRUE, any.missing = FALSE, lower = 1L)
+  # expect_integer(tab$iters, any.missing = FALSE, lower = 1L)
+  expect_list(tab$resample_result, types = "ResampleResult")
 
-  checkmate::expect_choice(bmr$task_type, mlr3::mlr_reflections$task_types$type, null.ok = nrow(bmr$data) == 0L)
+  ni = bmr$data$iterations()
+  if (ni) {
+    checkmate::expect_choice(bmr$task_type, mlr3::mlr_reflections$task_types$type, null.ok = ni == 0L)
+  } else {
+    testthat::expect_null(bmr$task_type)
+  }
+}
+
+expect_resultdata = function(rdata, consistency = TRUE) {
+  expect_class(rdata, "ResultData")
+  data = rdata$data
+
+  proto = mlr3:::star_init()
+  expect_set_equal(names(data), names(proto))
+
+  for (nn in names(proto)) {
+    expect_data_table(data[[nn]], key = data.table::key(proto[[nn]]))
+    expect_equal(names(data[[nn]]), names(proto[[nn]]))
+  }
+
+  expect_character(data$uhashes$uhash, unique = TRUE)
+
+  expect_fsetequal = function(x, y, column) {
+    expect_true(data.table::fsetequal(x[, column, with = FALSE], y[, column, with = FALSE], all = FALSE))
+  }
+
+  if (consistency) {
+    expect_fsetequal(data$fact, data$uhashes, "uhash")
+    expect_fsetequal(data$fact, data$tasks, "task_hash")
+    expect_fsetequal(data$fact, data$learners, "learner_phash")
+    expect_fsetequal(data$fact, data$learner_components, "learner_hash")
+    expect_fsetequal(data$fact, data$resamplings, "resampling_hash")
+  }
 }

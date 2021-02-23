@@ -4,14 +4,16 @@
 \name{mlr_task_generators}
 \alias{mlr_task_generators}
 \title{Dictionary of Task Generators}
-\format{\link[R6:R6Class]{R6::R6Class} object inheriting from \link[mlr3misc:Dictionary]{mlr3misc::Dictionary}.}
+\format{
+\link[R6:R6Class]{R6::R6Class} object inheriting from \link[mlr3misc:Dictionary]{mlr3misc::Dictionary}.
+}
 \description{
 A simple \link[mlr3misc:Dictionary]{mlr3misc::Dictionary} storing objects of class \link{TaskGenerator}.
 Each task generator has an associated help page, see \code{mlr_task_generators_[id]}.
 
 This dictionary can get populated with additional task generators by add-on packages.
 
-For a more convenient way to retrieve and construct task generators, see \code{\link[=tgen]{tgen()}}.
+For a more convenient way to retrieve and construct task generators, see \code{\link[=tgen]{tgen()}}/\code{\link[=tgens]{tgens()}}.
 }
 \section{Methods}{
 
@@ -32,9 +34,7 @@ mlr_task_generators$get("smiley")
 tgen("2dnormals")
 }
 \seealso{
-Example generators: \code{\link[=mlr_task_generators_xor]{xor}}
-
-Sugar function: \code{\link[=tgen]{tgen()}}
+Sugar functions: \code{\link[=tgen]{tgen()}}, \code{\link[=tgens]{tgens()}}
 
 Other Dictionary: 
 \code{\link{mlr_learners}},
@@ -43,7 +43,16 @@ Other Dictionary:
 \code{\link{mlr_tasks}}
 
 Other TaskGenerator: 
-\code{\link{TaskGenerator}}
+\code{\link{TaskGenerator}},
+\code{\link{mlr_task_generators_2dnormals}},
+\code{\link{mlr_task_generators_cassini}},
+\code{\link{mlr_task_generators_circle}},
+\code{\link{mlr_task_generators_friedman1}},
+\code{\link{mlr_task_generators_moons}},
+\code{\link{mlr_task_generators_simplex}},
+\code{\link{mlr_task_generators_smiley}},
+\code{\link{mlr_task_generators_spirals}},
+\code{\link{mlr_task_generators_xor}}
 }
 \concept{Dictionary}
 \concept{TaskGenerator}

@@ -1,9 +1,28 @@
+#' @title Get 'private' part of an R6 Instance
+#'
+#' @param x ([R6::R6Class]).
+#'
+#' @return (`environment()`).
+#' @noRd
+get_private = function(x) {
+  x[[".__enclos_env__"]][["private"]]
+}
+
 hashes = function(x) {
   map_chr(unname(x), "hash")
 }
 
+phashes = function(x) {
+  map_chr(unname(x), "phash")
+}
+
 hash = function(...) {
-  digest::digest(list(...), algo = "xxhash64")
+  dots = list(...)
+  dots = map_if(dots, is.function, function(fun) {
+    list(formals(fun), as.character(body(fun)))
+  })
+  dots = map_if(dots, is.data.table, as.list)
+  digest::digest(dots, algo = "xxhash64")
 }
 
 # updating join:
@@ -11,7 +30,7 @@ hash = function(...) {
 ujoin = function(x, y, key) {
   cn = setdiff(intersect(names(x), names(y)), key)
   expr = parse(text = paste0("`:=`(", paste0(sprintf("%1$s=i.%1$s", cn), collapse = ","), ")"))
-  x[y, eval(expr), on = key]
+  x[y, eval(expr), on = key][]
 }
 
 translate_types = function(x) {
@@ -26,27 +45,36 @@ allow_partial_matching = list(
   warnPartialMatchDollar = FALSE
 )
 
-# determines if execution via future will be running locally or remotely
-use_future = function() {
-  if (!isNamespaceLoaded("future") || inherits(future::plan(), "uniprocess")) {
-    return(FALSE)
-  }
 
-  if (!requireNamespace("future.apply", quietly = TRUE)) {
-    lg$warn("Package 'future.apply' could not be loaded. Parallelization disabled.")
-    return(FALSE)
-  }
-
-  return(TRUE)
+replace_with = function(x, needle, replacement) {
+  ii = (x == needle)
+  x = rep(x, 1L + (length(replacement) - 1L) * ii)
+  replace(x, ii, replacement)
 }
 
-open_help = function(man) {
-  if (!test_string(man)) {
-    message("No help available")
-    return(invisible())
+# extract values from a single column of a data table
+# tries to avoid the overhead of data.table for small tables
+fget = function(tab, i, j, key = key(tab)) {
+  if (nrow(tab) > 1000L) {
+    tab[list(i), j, on = key, with = FALSE][[1L]]
+  } else {
+    table = tab[[key]]
+    if (is.character(table)) {
+      tab[[j]][chmatch(i, table, nomatch = 0L)]
+    } else {
+      tab[[j]][match(i, table, nomatch = 0L)]
+    }
+  }
+}
+
+get_progressor = function(n, label = NA_character_) {
+  if (!isNamespaceLoaded("progressr")) {
+    return(NULL)
   }
 
-  parts = strsplit(man, split = "::", fixed = TRUE)[[1L]]
-  # pkgload overloads help
-  match.fun("help")(parts[2L], parts[1L])
+  progressr::progressor(steps = n, label = label)
+}
+
+allow_utf8_names = function() {
+  isTRUE(getOption("mlr3.allow_utf8_names"))
 }

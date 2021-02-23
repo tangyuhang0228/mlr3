@@ -3,7 +3,6 @@
 \name{mlr_measures_classif.logloss}
 \alias{mlr_measures_classif.logloss}
 \title{Log Loss}
-\format{\code{\link[R6:R6Class]{R6::R6Class()}} inheriting from \link{Measure}.}
 \description{
 Classification measure defined as \deqn{
   -\frac{1}{n} \sum_{i=1}^n \log \left(  p_i \right )
@@ -18,10 +17,10 @@ The score function calls \code{\link[mlr3measures:logloss]{mlr3measures::logloss
 If the measure is undefined for the input, \code{NaN} is returned.
 This can be customized by setting the field \code{na_value}.
 }
-\section{Construction}{
+\section{Dictionary}{
 
-This measures can be retrieved from the dictionary \link{mlr_measures}:\preformatted{mlr_measures$get("classif.logloss")
-msr("classif.logloss")
+This \link{Measure} can be instantiated via the \link[mlr3misc:Dictionary]{dictionary} \link{mlr_measures} or with the associated sugar function \code{\link[=msr]{msr()}}:\preformatted{mlr_measures$get("logloss")
+msr("logloss")
 }
 }
 
@@ -46,6 +45,7 @@ Other classification measures:
 \code{\link{mlr_measures_classif.acc}},
 \code{\link{mlr_measures_classif.auc}},
 \code{\link{mlr_measures_classif.bacc}},
+\code{\link{mlr_measures_classif.bbrier}},
 \code{\link{mlr_measures_classif.ce}},
 \code{\link{mlr_measures_classif.costs}},
 \code{\link{mlr_measures_classif.dor}},
@@ -56,9 +56,11 @@ Other classification measures:
 \code{\link{mlr_measures_classif.fomr}},
 \code{\link{mlr_measures_classif.fpr}},
 \code{\link{mlr_measures_classif.fp}},
+\code{\link{mlr_measures_classif.mbrier}},
 \code{\link{mlr_measures_classif.mcc}},
 \code{\link{mlr_measures_classif.npv}},
 \code{\link{mlr_measures_classif.ppv}},
+\code{\link{mlr_measures_classif.prauc}},
 \code{\link{mlr_measures_classif.precision}},
 \code{\link{mlr_measures_classif.recall}},
 \code{\link{mlr_measures_classif.sensitivity}},
@@ -72,7 +74,8 @@ Other multiclass classification measures:
 \code{\link{mlr_measures_classif.acc}},
 \code{\link{mlr_measures_classif.bacc}},
 \code{\link{mlr_measures_classif.ce}},
-\code{\link{mlr_measures_classif.costs}}
+\code{\link{mlr_measures_classif.costs}},
+\code{\link{mlr_measures_classif.mbrier}}
 }
 \concept{classification measures}
 \concept{multiclass classification measures}

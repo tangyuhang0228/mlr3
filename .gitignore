@@ -21,8 +21,18 @@ doc
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md
-inst/doc
 .DS_Store
 .Rproj.user
 revdep
 /README.html
+docs/
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Local History for Visual Studio Code
+.history/

@@ -8,9 +8,10 @@
 #' Each learner has an associated help page, see `mlr_learners_[id]`.
 #'
 #' This dictionary can get populated with additional learners by add-on packages.
-#' For more classification and regression learners, load the \CRANpkg{mlr3learners} package.
+#' For an opinionated set of solid classification and regression learners, install and load the \CRANpkg{mlr3learners} package.
+#' More learners are connected via \url{https://github.com/mlr-org/mlr3extralearners}.
 #'
-#' For a more convenient way to retrieve and construct learners, see [lrn()].
+#' For a more convenient way to retrieve and construct learners, see [lrn()]/[lrns()].
 #'
 #' @section Methods:
 #' See [mlr3misc::Dictionary].
@@ -24,10 +25,7 @@
 #' @family Dictionary
 #' @family Learner
 #' @seealso
-#' Example learners: [`classif.rpart`][mlr_learners_classif.rpart], [`regr.rpart`][mlr_learners_regr.rpart],
-#'   [`classif.featureless`][mlr_learners_classif.featureless], [`regr.featureless`][mlr_learners_regr.featureless], [`classif.debug`][mlr_learners_classif.debug]
-#'
-#' Sugar function: [lrn()]
+#' Sugar functions: [lrn()], [lrns()]
 #'
 #' Extension Packages: \CRANpkg{mlr3learners}
 #' @export
@@ -43,7 +41,8 @@ mlr_learners = R6Class("DictionaryLearner",
 #' @export
 as.data.table.DictionaryLearner = function(x, ...) {
   setkeyv(map_dtr(x$keys(), function(key) {
-    l = x$get(key)
+    l = withCallingHandlers(x$get(key),
+      packageNotFoundWarning = function(w) invokeRestart("muffleWarning"))
     list(
       key = key,
       feature_types = list(l$feature_types),

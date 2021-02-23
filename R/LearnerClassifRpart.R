@@ -1,36 +1,43 @@
 #' @title Classification Tree Learner
 #'
-#' @usage NULL
 #' @name mlr_learners_classif.rpart
-#' @format [R6::R6Class] inheriting from [LearnerClassif].
 #' @include LearnerClassif.R
-#'
-#' @section Construction:
-#' ```
-#' LearnerClassifRpart$new()
-#' mlr_learners$get("classif.rpart")
-#' lrn("classif.rpart")
-#' ```
 #'
 #' @description
 #' A [LearnerClassif] for a classification tree implemented in [rpart::rpart()] in package \CRANpkg{rpart}.
 #' Parameter `xval` is set to 0 in order to save some computation time.
+#' Parameter `model` has been renamed to `keep_model`.
+#'
+#' @templateVar id classif.rpart
+#' @template section_dictionary_learner
+#'
+#' @section Meta Information:
+#' `r rd_info(lrn("classif.rpart"))`
+#'
+#' @section Parameters:
+#' `r rd_info(lrn("classif.rpart")$param_set)`
 #'
 #' @references
-#' \cite{mlr3}{breiman_2017}
+#' `r format_bib("breiman_1984")`
 #'
 #' @template seealso_learner
 #' @export
 LearnerClassifRpart = R6Class("LearnerClassifRpart", inherit = LearnerClassif,
   public = list(
+    #' @description
+    #' Creates a new instance of this [R6][R6::R6Class] class.
     initialize = function() {
       ps = ParamSet$new(list(
         ParamInt$new(id = "minsplit", default = 20L, lower = 1L, tags = "train"),
+        ParamInt$new(id = "minbucket", lower = 1L, tags = "train"),
         ParamDbl$new(id = "cp", default = 0.01, lower = 0, upper = 1, tags = "train"),
         ParamInt$new(id = "maxcompete", default = 4L, lower = 0L, tags = "train"),
         ParamInt$new(id = "maxsurrogate", default = 5L, lower = 0L, tags = "train"),
         ParamInt$new(id = "maxdepth", default = 30L, lower = 1L, upper = 30L, tags = "train"),
-        ParamInt$new(id = "xval", default = 10L, lower = 0L, tags = "train")
+        ParamInt$new(id = "usesurrogate", default = 2L, lower = 0L, upper = 2L, tags = "train"),
+        ParamInt$new(id = "surrogatestyle", default = 0L, lower = 0L, upper = 1L, tags = "train"),
+        ParamInt$new(id = "xval", default = 10L, lower = 0L, tags = "train"),
+        ParamLgl$new(id = "keep_model", default = FALSE, tags = "train")
       ))
       ps$values = list(xval = 0L)
 
@@ -45,28 +52,9 @@ LearnerClassifRpart = R6Class("LearnerClassifRpart", inherit = LearnerClassif,
       )
     },
 
-    train_internal = function(task) {
-      pv = self$param_set$get_values(tags = "train")
-      if ("weights" %in% task$properties) {
-        pv = insert_named(pv, list(weights = task$weights$weight))
-      }
-      invoke(rpart::rpart, formula = task$formula(), data = task$data(), .args = pv, .opts = allow_partial_matching)
-    },
-
-    predict_internal = function(task) {
-      newdata = task$data(cols = task$feature_names)
-      response = prob = NULL
-
-      if (self$predict_type == "response") {
-        response = invoke(predict, self$model, newdata = newdata, type = "class", .opts = allow_partial_matching)
-        # response = as.character(response)
-      } else if (self$predict_type == "prob") {
-        prob = invoke(predict, self$model, newdata = newdata, type = "prob", .opts = allow_partial_matching)
-      }
-
-      PredictionClassif$new(task = task, response = response, prob = prob)
-    },
-
+    #' @description
+    #' The importance scores are extracted from the model slot `variable.importance`.
+    #' @return Named `numeric()`.
     importance = function() {
       if (is.null(self$model)) {
         stopf("No model stored")
@@ -75,11 +63,41 @@ LearnerClassifRpart = R6Class("LearnerClassifRpart", inherit = LearnerClassif,
       sort(self$model$variable.importance %??% set_names(numeric()), decreasing = TRUE)
     },
 
+    #' @description
+    #' Selected features are extracted from the model slot `frame$var`.
+    #' @return `character()`.
     selected_features = function() {
       if (is.null(self$model)) {
         stopf("No model stored")
       }
-      unique(setdiff(self$model$frame$var, "<leaf>"))
+      setdiff(self$model$frame$var, "<leaf>")
+    }
+  ),
+
+  private = list(
+    .train = function(task) {
+      pv = self$param_set$get_values(tags = "train")
+      names(pv) = replace(names(pv), names(pv) == "keep_model", "model")
+      if ("weights" %in% task$properties) {
+        pv = insert_named(pv, list(weights = task$weights$weight))
+      }
+
+      invoke(rpart::rpart, formula = task$formula(), data = task$data(), .args = pv, .opts = allow_partial_matching)
+    },
+
+    .predict = function(task) {
+      newdata = task$data(cols = task$feature_names)
+      response = prob = NULL
+
+      if ("response" %in% self$predict_type) {
+        response = invoke(predict, self$model, newdata = newdata, type = "class", .opts = allow_partial_matching)
+        response = unname(response)
+      } else if ("prob" %in% self$predict_type) {
+        prob = invoke(predict, self$model, newdata = newdata, type = "prob", .opts = allow_partial_matching)
+        rownames(prob) = NULL
+      }
+
+      list(response = response, prob = prob)
     }
   )
 )

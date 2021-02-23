@@ -1,5 +1,3 @@
-context("TaskClassif")
-
 test_that("Basic ops on iris task", {
   task = tsk("iris")
   expect_task(task)
@@ -15,7 +13,7 @@ test_that("Basic ops on iris task", {
 
 test_that("$class_names consider also inactive rows", {
   task = tsk("iris")
-  task$set_row_role(1:100, character())
+  task$set_row_roles(1:100, remove_from = "use")
 
   expect_set_equal(task$class_names, levels(iris$Species))
 })
@@ -71,9 +69,38 @@ test_that("Positive class always comes first", {
     expect_equal(task$negative, lvls[2])
     expect_equal(task$class_names, lvls)
     expect_equal(levels(task$truth()), lvls)
+    expect_equal(levels(task$data(cols = task$target_names)[[1L]]), lvls)
     preds = lrn$train(task)$predict(task)
     expect_equal(levels(preds$truth), lvls)
     expect_equal(levels(preds$response), lvls)
     expect_set_equal(colnames(preds$prob), lvls)
   }
+})
+
+test_that("class property is updated", {
+  task = tsk("iris")
+
+  task$filter(1:100)
+  expect_subset("multiclass", task$properties)
+  task$droplevels()
+  expect_subset("twoclass", task$properties)
+  task$filter(1:50)
+  expect_subset("twoclass", task$properties)
+  expect_error(task$droplevels())
+
+  task$rbind(iris)
+  task$droplevels()
+  expect_subset("multiclass", task$properties)
+})
+
+
+test_that("droplevels keeps level order", {
+  task = tsk("iris")
+  my_order = c("virginica", "setosa", "versicolor")
+  task$col_info[id == "Species", levels := list(my_order)]
+  lvls = task$class_names
+  expect_equal(lvls, my_order)
+  task$filter(c(101:150, 1:50)) # remove versicolor
+  task$droplevels()
+  expect_equal(task$class_names, c("virginica", "setosa"))
 })

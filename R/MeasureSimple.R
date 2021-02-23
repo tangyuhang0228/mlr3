@@ -16,14 +16,11 @@ MeasureBinarySimple = R6Class("MeasureBinaryimple",
         man = paste0("mlr3::mlr_measures_classif.", name)
       )
       self$fun = get(name, envir = asNamespace("mlr3measures"), mode = "function")
-    },
+    }
+  ),
 
-    score = function(prediction, ...) {
-      assert_prediction(prediction)
-      measure_score(self, prediction)
-    },
-
-    score_internal = function(prediction, ...) {
+  private = list(
+    .score = function(prediction, ...) {
       truth = prediction$truth
       positive = levels(truth)[1L]
       self$fun(truth = truth, response = prediction$response, prob = prediction$prob[, positive], positive = positive, na_value = self$na_value)
@@ -48,14 +45,11 @@ MeasureClassifSimple = R6Class("MeasureClassifSimple",
         man = paste0("mlr3::mlr_measures_classif.", name)
       )
       self$fun = get(name, envir = asNamespace("mlr3measures"), mode = "function")
-    },
+    }
+  ),
 
-    score = function(prediction, ...) {
-      assert_prediction(prediction)
-      measure_score(self, prediction)
-    },
-
-    score_internal = function(prediction, ...) {
+  private = list(
+    .score = function(prediction, ...) {
       self$fun(truth = prediction$truth, response = prediction$response, prob = prediction$prob, na_value = self$na_value)
     }
   )
@@ -78,14 +72,11 @@ MeasureRegrSimple = R6Class("MeasureRegrSimple",
         man = paste0("mlr3::mlr_measures_regr.", name)
       )
       self$fun = get(name, envir = asNamespace("mlr3measures"), mode = "function")
-    },
+    }
+  ),
 
-    score = function(prediction, ...) {
-      assert_prediction(prediction)
-      measure_score(self, prediction)
-    },
-
-    score_internal = function(prediction, ...) {
+  private = list(
+    .score = function(prediction, ...) {
       self$fun(truth = prediction$truth, response = prediction$response, se = prediction$se, na_value = self$na_value)
     }
   )
@@ -96,6 +87,10 @@ MeasureRegrSimple = R6Class("MeasureRegrSimple",
 #' @templateVar id auc
 #' @template measure_binary
 mlr_measures$add("classif.auc", MeasureBinarySimple, name = "auc")
+#'
+#' @templateVar id bbrier
+#' @template measure_binary
+mlr_measures$add("classif.bbrier", MeasureBinarySimple, name = "bbrier")
 
 #' @templateVar id dor
 #' @template measure_binary
@@ -141,6 +136,10 @@ mlr_measures$add("classif.npv", MeasureBinarySimple, name = "npv")
 #' @template measure_binary
 mlr_measures$add("classif.ppv", MeasureBinarySimple, name = "ppv")
 
+#' @templateVar id prauc
+#' @template measure_binary
+mlr_measures$add("classif.prauc", MeasureBinarySimple, name = "prauc")
+
 #' @templateVar id precision
 #' @template measure_binary
 mlr_measures$add("classif.precision", MeasureBinarySimple, name = "precision")
@@ -182,6 +181,10 @@ mlr_measures$add("classif.acc", MeasureClassifSimple, name = "acc")
 #' @templateVar id bacc
 #' @template measure_classif
 mlr_measures$add("classif.bacc", MeasureClassifSimple, name = "bacc")
+
+#' @templateVar id mbrier
+#' @template measure_classif
+mlr_measures$add("classif.mbrier", MeasureClassifSimple, name = "mbrier")
 
 #' @templateVar id ce
 #' @template measure_classif

@@ -1,7 +1,5 @@
 #' @title Classification Task
 #'
-#' @usage NULL
-#' @format [R6::R6Class] object inheriting from [Task]/[TaskSupervised].
 #' @include TaskSupervised.R
 #'
 #' @description
@@ -13,47 +11,16 @@
 #' * `"twoclass"`: The task is a binary classification problem.
 #' * `"multiclass"`: The task is a multiclass classification problem.
 #'
-#' Predefined tasks are stored in the [mlr3misc::Dictionary] [mlr_tasks].
+#' Predefined tasks are stored in the [dictionary][mlr3misc::Dictionary] [mlr_tasks].
+#' More example tasks can be found in this dictionary after loading \CRANpkg{mlr3data}.
 #'
-#' @section Construction:
-#' ```
-#' t = TaskClassif$new(id, backend, target, positive = NULL)
-#' ```
-#'
-#' * `id` :: `character(1)`\cr
-#'   Identifier for the task.
-#'
-#' * `backend` :: [DataBackend]\cr
-#'   Either a [DataBackend], or any object which is convertible to a DataBackend with `as_data_backend()`.
-#'   E.g., a `data.frame()` will be converted to a [DataBackendDataTable].
-#'
-#' * `target` :: `character(1)`\cr
-#'   Name of the target column.
-#'
-#' * `positive` :: `character(1)`\cr
-#'   Only for binary classification: Name of the positive class.
-#'   The levels of the target columns are reordered accordingly, so that the first element of `$class_names` is the
-#'   positive class, and the second element is the negative class.
-#'
-#' @section Fields:
-#' All methods from [TaskSupervised], and additionally:
-#'
-#' * `class_names` :: `character()`\cr
-#'   Returns all class labels of the target column.
-#'
-#' * `positive` :: `character(1)`\cr
-#'   Stores the positive class for binary classification tasks, and `NA` for multiclass tasks.
-#'   To switch the positive class, assign a level to this field.
-#'
-#' * `negative` :: `character(1)`\cr
-#'   Stores the negative class for binary classification tasks, and `NA` for multiclass tasks.
-#'
-#' @section Methods:
-#' See [TaskSupervised].
+#' @template param_id
+#' @template param_backend
+#' @template param_rows
+#' @template param_cols
+#' @template param_data_format
 #'
 #' @family Task
-#' @seealso
-#' Example classification tasks: [`iris`][mlr_tasks_iris]
 #' @export
 #' @examples
 #' data("Sonar", package = "mlbench")
@@ -70,38 +37,77 @@
 TaskClassif = R6Class("TaskClassif",
   inherit = TaskSupervised,
   public = list(
-    initialize = function(id, backend, target, positive = NULL) {
-
+    #' @description
+    #' Creates a new instance of this [R6][R6::R6Class] class.
+    #' The function [as_task_classif()] provides an alternative way to construct classification tasks.
+    #'
+    #' @template param_target
+    #'
+    #' @param positive (`character(1)`)\cr
+    #'   Only for binary classification: Name of the positive class.
+    #'   The levels of the target columns are reordered accordingly, so that the first element of `$class_names` is the
+    #'   positive class, and the second element is the negative class.
+    #' @template param_extra_args
+    initialize = function(id, backend, target, positive = NULL, extra_args = list()) {
       assert_string(target)
-      super$initialize(id = id, task_type = "classif", backend = backend, target = target)
+      super$initialize(
+        id = id, task_type = "classif", backend = backend,
+        target = target, extra_args = extra_args)
 
-      info = self$col_info[id == target]
-      levels = info$levels[[1L]]
+      private$.update_class_property()
 
-      if (info$type != "factor") {
-        stopf("Target column '%s' must be a factor", target)
-      }
-      if (length(levels) < 2L) {
-        stopf("Target column '%s' must have at least two levels", target)
-      }
-
-      self$properties = union(self$properties, if (length(levels) == 2L) "twoclass" else "multiclass")
       if (!is.null(positive)) {
+        # NB: this also sets `extra_args$positive`
         self$positive = positive
       }
     },
 
+    #' @description
+    #' Calls `$data` from parent class [Task] and ensures that levels of the target column
+    #' are in the right order.
+    #'
+    #' @param ordered (`logical(1)`)\cr
+    #'   If `TRUE` (default), data is ordered according to the columns with column role `"order"`.
+    #'
+    #' @return Depending on the [DataBackend], but usually a [data.table::data.table()].
+    data = function(rows = NULL, cols = NULL, data_format = "data.table", ordered = TRUE) {
+      data = super$data(rows, cols, data_format, ordered)
+      fix_factor_levels(data, set_names(list(self$class_names), self$target_names))
+    },
+
+    #' @description
+    #' True response for specified `row_ids`. Format depends on the task type.
+    #' Defaults to all rows with role `"use"`.
+    #' @return `factor()`.
     truth = function(rows = NULL) {
       truth = super$truth(rows)[[1L]]
       as_factor(truth, levels = self$class_names)
+    },
+
+    #' @description
+    #' Updates the cache of stored factor levels, removing all levels not present in the current set of active rows.
+    #' `cols` defaults to all columns with storage type "factor" or "ordered".
+    #' Also updates the task property `"twoclass"`/`"multiclass"`.
+    #'
+    #' @return Modified `self`.
+    droplevels = function(cols = NULL) {
+      super$droplevels()
+      private$.update_class_property()
+      invisible(self)
     }
   ),
 
   active = list(
-    class_names = function() {
-      self$col_info[list(self$target_names), "levels", on = "id", with = FALSE][[1L]][[1L]]
+    #' @field class_names (`character()`)\cr
+    #' Returns all class labels of the target column.
+    class_names = function(rhs) {
+      assert_ro_binding(rhs)
+      fget(self$col_info, i = self$target_names, j = "levels", key = "id")[[1L]]
     },
 
+    #' @field positive (`character(1)`)\cr
+    #' Stores the positive class for binary classification tasks, and `NA` for multiclass tasks.
+    #' To switch the positive class, assign a level to this field.
     positive = function(rhs) {
       lvls = self$class_names
       if (missing(rhs)) {
@@ -116,15 +122,31 @@ TaskClassif = R6Class("TaskClassif",
       }
       positive = assert_choice(rhs, lvls)
       negative = setdiff(lvls, rhs)
+      self$extra_args$positive = positive
       self$col_info[list(self$target_names), levels := list(list(c(positive, negative))), on = "id"][]
     },
 
-    negative = function() {
+    #' @field negative (`character(1)`)\cr
+    #' Stores the negative class for binary classification tasks, and `NA` for multiclass tasks.
+    negative = function(rhs) {
+      assert_ro_binding(rhs)
       lvls = self$class_names
       if (length(lvls) != 2L) {
         return(NA_character_)
       }
       return(lvls[2L])
+    }
+  ),
+
+  private = list(
+    .update_class_property = function() {
+      nlvls = length(self$class_names)
+      if (nlvls < 2L) {
+        stopf("Target column '%s' must have at least two levels", self$target_names)
+      }
+
+      private$.properties = setdiff(private$.properties, c("twoclass", "multiclass"))
+      private$.properties = union(private$.properties, if (nlvls == 2L) "twoclass" else "multiclass")
     }
   )
 )

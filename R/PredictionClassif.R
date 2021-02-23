@@ -1,7 +1,5 @@
 #' @title Prediction Object for Classification
 #'
-#' @usage NULL
-#' @format [R6::R6Class] object inheriting from [Prediction].
 #' @include Prediction.R
 #'
 #' @description
@@ -16,55 +14,6 @@
 #' If this object is constructed manually, make sure that the factor levels for `truth`
 #' have the same levels as the task, in the same order.
 #' In case of binary classification tasks, the positive class label must be the first level.
-#'
-#' @section Construction:
-#' ```
-#' p = PredictionClassif$new(task = NULL, row_ids = task$row_ids, truth = task$truth(), response = NULL, prob = NULL)
-#' ```
-#'
-#' * `task` :: [TaskClassif]\cr
-#'   Task, used to extract defaults for `row_ids` and `truth`.
-#'
-#' * `row_ids` :: (`integer()` | `character()`)\cr
-#'   Row ids of the observations in the test set.
-#'
-#' * `truth` :: `factor()`\cr
-#'   True (observed) labels. See the note on manual construction.
-#'
-#' * `response` :: (`character()` | `factor()`)\cr
-#'   Vector of predicted class labels.
-#'   One element for each observation in the test set.
-#'   Character vectors are automatically converted to factors.
-#'   See the note on manual construction.
-#'
-#' * `prob` :: `matrix()`\cr
-#'   Numeric matrix of posterior class probabilities with one column for each class
-#'   and one row for each observation in the test set.
-#'   Columns must be named with class labels, row names are automatically removed.
-#'   If `prob` is provided, but `response` is not, the class labels are calculated from
-#'   the probabilities using [max.col()] with `ties.method` set to `"random"`.
-#'
-#' @section Fields:
-#' All fields from [Prediction], and additionally:
-#'
-#' * `response` :: `factor()`\cr
-#'   Access to the stored predicted class labels.
-#'
-#' * `prob` :: `matrix()`\cr
-#'   Access to the stored probabilities.
-#'
-#' * `confusion` :: `matrix()`\cr
-#'   Confusion matrix resulting from the comparison of truth and response.
-#'   Truth is in columns, predicted response is in rows.
-#'
-#' The field `task_type` is set to `"classif"`.
-#'
-#' @section Methods:
-#'
-#' * `set_threshold(th)`\cr
-#'   `numeric()` -> `self`\cr
-#'   Sets the prediction response based on the provided threshold.
-#'   See the section on thresholding for more information.
 #'
 #' @section Thresholding:
 #' If probabilities are stored, it is possible to change the threshold which determines the predicted class label.
@@ -84,10 +33,16 @@
 #'   Anyway, the class label with maximum ratio is selected.
 #'   In case of ties in the ratio, one of the tied class labels is selected randomly.
 #'
+#'   Note that there are the following edge cases for threshold equal to `0` which are handled specially:
+#'   1. With threshold 0 the resulting ratio gets `Inf` and thus gets always selected.
+#'      If there are multiple ratios with value `Inf`, one is selected according to `ties_method` (randomly per default).
+#'   2. If additionally the predicted probability is also 0, the ratio `0/0` results in `NaN` values.
+#'      These are simply replaced by `0` and thus will never get selected.
+#'
 #' @family Prediction
 #' @export
 #' @examples
-#' task = tsk("iris")
+#' task = tsk("penguins")
 #' learner = lrn("classif.rpart", predict_type = "prob")
 #' learner$train(task)
 #' p = learner$predict(task)
@@ -107,50 +62,63 @@
 PredictionClassif = R6Class("PredictionClassif", inherit = Prediction,
   cloneable = FALSE,
   public = list(
-    initialize = function(task = NULL, row_ids = task$row_ids, truth = task$truth(), response = NULL, prob = NULL) {
-      row_ids = assert_row_ids(row_ids)
-      n = length(row_ids)
-
-      truth = assert_factor(truth, len = n, null.ok = TRUE)
-      lvls = levels(truth)
-
-      if (!is.null(response)) {
-        response = assert_factor(as_factor(response, levels = lvls), len = n)
-      }
-
-      if (!is.null(prob)) {
-        assert_matrix(prob, nrows = n, ncols = length(lvls))
-        assert_numeric(prob, lower = 0, upper = 1)
-        if (!identical(colnames(prob), lvls)) {
-          assert_names(colnames(prob), permutation.of = lvls)
-          prob = prob[, match(colnames(prob), lvls), drop = FALSE]
-        }
-        if (!is.null(rownames(prob))) {
-          rownames(prob) = NULL
-        }
-
-        if (is.null(response)) {
-          # calculate response from prob
-          i = max.col(prob, ties.method = "random")
-          response = factor(colnames(prob)[i], levels = lvls)
-        }
-      }
-
-      self$task_type = "classif"
-      self$predict_types = c("response", "prob")[c(!is.null(response), !is.null(prob))]
-      self$data$tab = data.table(
-        row_id = row_ids,
-        truth = truth,
-        response = response
+    #' @description
+    #' Creates a new instance of this [R6][R6::R6Class] class.
+    #'
+    #' @param task ([TaskClassif])\cr
+    #'   Task, used to extract defaults for `row_ids` and `truth`.
+    #'
+    #' @param row_ids (`integer()`)\cr
+    #'   Row ids of the predicted observations, i.e. the row ids of the test set.
+    #'
+    #' @param truth (`factor()`)\cr
+    #'   True (observed) labels. See the note on manual construction.
+    #'
+    #' @param response (`character()` | `factor()`)\cr
+    #'   Vector of predicted class labels.
+    #'   One element for each observation in the test set.
+    #'   Character vectors are automatically converted to factors.
+    #'   See the note on manual construction.
+    #'
+    #' @param prob (`matrix()`)\cr
+    #'   Numeric matrix of posterior class probabilities with one column for each class
+    #'   and one row for each observation in the test set.
+    #'   Columns must be named with class labels, row names are automatically removed.
+    #'   If `prob` is provided, but `response` is not, the class labels are calculated from
+    #'   the probabilities using [max.col()] with `ties.method` set to `"random"`.
+    #'
+    #' @param check (`logical(1)`)\cr
+    #'   If `TRUE`, performs some argument checks and predict type conversions.
+    initialize = function(task = NULL, row_ids = task$row_ids, truth = task$truth(), response = NULL, prob = NULL, check = TRUE) {
+      pdata = new_prediction_data(
+        list(row_ids = row_ids, truth = truth, response = response, prob = prob),
+        task_type = "classif"
       )
-      self$data$prob = prob
+
+      if (check) {
+        pdata = check_prediction_data(pdata)
+      }
+      self$task_type = "classif"
+      self$man = "mlr3::PredictionClassif"
+      self$data = pdata
+      self$predict_types = intersect(c("response", "prob"), names(pdata))
     },
 
-    help = function() {
-      open_help("mlr3::PredictionClassif")
-    },
 
-    set_threshold = function(threshold) {
+    #' @description
+    #' Sets the prediction response based on the provided threshold.
+    #' See the section on thresholding for more information.
+    #'
+    #' @param threshold (`numeric()`).
+    #' @param ties_method (`character(1)`)\cr
+    #'   One of `"random"`, `"first"` or `"last"` (c.f. [max.col()]) to determine how to deal with
+    #'   tied probabilities.
+    #'
+    #' @return
+    #' Returns the object itself, but modified **by reference**.
+    #' You need to explicitly `$clone()` the object beforehand if you want to keeps
+    #' the object in its previous state.
+    set_threshold = function(threshold, ties_method = "random") {
       if (!is.matrix(self$data$prob)) {
         stopf("Cannot set threshold, no probabilities available")
       }
@@ -168,78 +136,51 @@ PredictionClassif = R6Class("PredictionClassif", inherit = Prediction,
         threshold = threshold[lvls] # reorder thresh so it is in the same order as levels
 
         # multiply all rows by threshold, then get index of max element per row
-        w = ifelse(threshold > 0, 1 / threshold, Inf)
-        prob = self$data$prob %*% diag(w)
+        prob = self$data$prob %*% diag(1 / threshold) # can generate Inf for threshold 0
+        prob[is.na(prob)] = 0 # NaN results from 0 * Inf, replace with 0, c.f. #452
       }
 
-      ind = max.col(prob, ties.method = "random")
-      self$data$tab$response = factor(lvls[ind], levels = lvls)
+      ind = max.col(prob, ties.method = ties_method)
+      self$data$response = factor(lvls[ind], levels = lvls)
       invisible(self)
     }
   ),
 
 
   active = list(
-    response = function() {
-      self$data$tab$response %??% factor(rep(NA, length(self$data$row_ids)), levels(self$data$truth))
+    #' @field response (`factor()`)\cr
+    #' Access to the stored predicted class labels.
+    response = function(rhs) {
+      assert_ro_binding(rhs)
+      self$data$response %??% factor(rep(NA, length(self$data$row_ids)), levels(self$data$truth))
     },
 
-    prob = function() {
+    #' @field prob (`matrix()`)\cr
+    #' Access to the stored probabilities.
+    prob = function(rhs) {
+      assert_ro_binding(rhs)
       self$data$prob
     },
 
-    confusion = function() {
-      self$data$tab[, table(response, truth, useNA = "ifany")]
-    },
-
-    missing = function() {
-      miss = logical(nrow(self$data$tab))
-      if ("response" %in% self$predict_types) {
-        miss = is.na(self$data$tab$response)
-      }
-      if ("prob" %in% self$predict_types) {
-        miss = miss | apply(self$data$prob, 1L, anyMissing)
-      }
-
-      self$data$tab$row_id[miss]
+    #' @field confusion (`matrix()`)\cr
+    #' Confusion matrix, as resulting from the comparison of truth and response.
+    #' Truth is in columns, predicted response is in rows.
+    confusion = function(rhs) {
+      assert_ro_binding(rhs)
+      table(response = self$data$response, truth = self$data$truth, useNA = "ifany")
     }
   )
 )
 
 #' @export
-as.data.table.PredictionClassif = function(x, ...) {
-  tab = copy(x$data$tab)
+as.data.table.PredictionClassif = function(x, ...) { # nolint
+  tab = as.data.table(x$data[c("row_ids", "truth", "response")])
+
   if ("prob" %in% x$predict_types) {
     prob = as.data.table(x$data$prob)
     setnames(prob, names(prob), paste0("prob.", names(prob)))
     tab = rcbind(tab, prob)
   }
 
-  tab
-}
-
-#' @export
-c.PredictionClassif = function(..., keep_duplicates = TRUE) {
-  dots = list(...)
-  assert_list(dots, "PredictionClassif")
-  assert_flag(keep_duplicates)
-  if (length(dots) == 1L) {
-    return(dots[[1L]])
-  }
-
-  predict_types = map(dots, "predict_types")
-  if (!every(predict_types[-1L], setequal, y = predict_types[[1L]])) {
-    stopf("Cannot rbind predictions: Probabilities for some predictions, not all")
-  }
-
-  tab = map_dtr(dots, function(p) p$data$tab, .fill = FALSE)
-  prob = do.call(rbind, map(dots, "prob"))
-
-  if (!keep_duplicates) {
-    keep = !duplicated(tab, by = "row_id", fromLast = TRUE)
-    tab = tab[keep]
-    prob = prob[keep,, drop = FALSE]
-  }
-
-  PredictionClassif$new(row_ids = tab$row_id, truth = tab$truth, response = tab$response, prob = prob)
+  tab[]
 }

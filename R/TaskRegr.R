@@ -1,43 +1,23 @@
 #' @title Regression Task
 #'
-#' @usage NULL
-#' @format [R6::R6Class] object inheriting from [Task]/[TaskSupervised].
 #' @include TaskSupervised.R
 #'
 #' @description
 #' This task specializes [Task] and [TaskSupervised] for regression problems.
 #' The target column is assumed to be numeric.
-#' The `task_type` is set to `"classif"`.
+#' The `task_type` is set to `"regr"`.
 #'
-#' Predefined tasks are stored in the [mlr3misc::Dictionary] [mlr_tasks].
+#' Predefined tasks are stored in the [dictionary][mlr3misc::Dictionary] [mlr_tasks].
+#' More example tasks can be found in this dictionary after loading \CRANpkg{mlr3data}.
 #'
-#' @section Construction:
-#' ```
-#' t = TaskRegr$new(id, backend, target)
-#' ```
-#'
-#' * `id` :: `character(1)`\cr
-#'   Identifier for the task.
-#'
-#' * `backend` :: ([DataBackend] | `data.frame()` | ...)\cr
-#'   Either a [DataBackend], or any object which is convertible to a DataBackend with `as_data_backend()`.
-#'   E.g., a `data.frame()` will be converted to a [DataBackendDataTable].
-#'
-#' * `target` :: `character(1)`\cr
-#'   Name of the target column.
-#'
-#' @section Fields:
-#' See [TaskSupervised].
-#'
-#' @section Methods:
-#' See [TaskSupervised].
+#' @template param_rows
+#' @template param_id
+#' @template param_backend
 #'
 #' @family Task
-#' @seealso
-#' Example regression tasks: [`boston_housing`][mlr_tasks_boston_housing]
 #' @export
 #' @examples
-#' task = TaskRegr$new("iris", backend = iris, target = "Sepal.Length")
+#' task = TaskRegr$new("penguins", backend = palmerpenguins::penguins, target = "bill_length_mm")
 #' task$task_type
 #' task$formula()
 #' task$truth()
@@ -47,9 +27,17 @@
 TaskRegr = R6Class("TaskRegr",
   inherit = TaskSupervised,
   public = list(
-    initialize = function(id, backend, target) {
+    #' @description
+    #' Creates a new instance of this [R6][R6::R6Class] class.
+    #' The function [as_task_regr()] provides an alternative way to construct regression tasks.
+    #'
+    #' @template param_target
+    #' @template param_extra_args
+    initialize = function(id, backend, target, extra_args = list()) {
       assert_string(target)
-      super$initialize(id = id, task_type = "regr", backend = backend, target = target)
+      super$initialize(
+        id = id, task_type = "regr", backend = backend,
+        target = target, extra_args = extra_args)
 
       type = self$col_info[id == target]$type
       if (type %nin% c("integer", "numeric")) {
@@ -57,6 +45,10 @@ TaskRegr = R6Class("TaskRegr",
       }
     },
 
+    #' @description
+    #' True response for specified `row_ids`. Format depends on the task type.
+    #' Defaults to all rows with role "use".
+    #' @return `numeric()`.
     truth = function(rows = NULL) {
       super$truth(rows)[[1L]]
     }

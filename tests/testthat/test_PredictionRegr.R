@@ -1,5 +1,3 @@
-context("PredictionRegr")
-
 test_that("Construction", {
   task = tsk("boston_housing")
   p = PredictionRegr$new(row_ids = task$row_ids, truth = task$truth(), response = task$truth())
@@ -23,7 +21,7 @@ test_that("c", {
   lrn$predict_type = "se"
   rr = resample(task, lrn, rsmp("cv", folds = 3))
 
-  pred = do.call(c, map(rr$data$prediction, "test"))
+  pred = do.call(c, rr$predictions())
   expect_prediction(pred)
   expect_prediction_regr(pred)
 
@@ -31,8 +29,8 @@ test_that("c", {
   expect_data_table(dt, nrows = task$nrow, ncols = 4L, any.missing = FALSE)
 
   # duplicates are detected?
-  p1 = rr$data$prediction[[1L]]$test
-  p2 = rr$data$prediction[[1L]]$test
+  p1 = rr$data$data$fact$prediction[[1L]]$test
+  p2 = rr$data$data$fact$prediction[[1L]]$test
   p3 = c(p1, p2, keep_duplicates = FALSE)
   expect_equal(sort(p1$data$row_ids), sort(p2$data$row_ids))
   expect_equal(sort(p1$data$row_ids), sort(p3$data$row_ids))
@@ -45,9 +43,45 @@ test_that("c drops se (#250)", {
   lrn = lrn("regr.featureless")
   rr = resample(task, lrn, rsmp("cv", folds = 3))
 
-  pred = do.call(c, map(rr$data$prediction, "test"))
+  pred = do.call(c, rr$predictions())
   expect_null(pred$data$se)
   expect_false("se" %in% pred$predict_types)
   expect_true(allMissing(pred$se))
   expect_false("se" %in% names(as.data.table(pred)))
+})
+
+test_that("distr", {
+  skip_if_not_installed("distr6")
+
+  task = tsk("mtcars")
+  distr = distr6::VectorDistribution$new(
+    distribution = "Binomial",
+    params = replicate(task$nrow, list(prob = runif(1), size = 10), FALSE)
+  )
+
+  p = PredictionRegr$new(row_ids = task$row_ids, truth = task$truth(), distr = distr)
+  expect_output(print(p))
+  expect_set_equal(p$predict_types, c("response", "se", "distr"))
+  expect_numeric(p$response, len = task$nrow, any.missing = FALSE)
+  expect_numeric(p$se, len = task$nrow, any.missing = FALSE, lower = 0)
+  expect_integer(p$missing, len = 0)
+  expect_prediction(p)
+
+  expect_prediction(c(p, p))
+  expect_output(print(p))
+  expect_set_equal(p$predict_types, c("response", "se", "distr"))
+  expect_numeric(p$response, len = task$nrow, any.missing = FALSE)
+  expect_numeric(p$se, len = task$nrow, any.missing = FALSE, lower = 0)
+  expect_integer(p$missing, len = 0)
+})
+
+test_that("as_prediction_regr", {
+  task = tsk("mtcars")
+  learner = lrn("regr.featureless")
+  p = learner$train(task)$predict(task)
+
+  tab = as.data.table(p)
+  p2 = as_prediction_regr(tab)
+
+  expect_equal(tab, as.data.table(p2))
 })

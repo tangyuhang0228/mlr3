@@ -3,7 +3,9 @@
 \name{mlr_tasks_spam}
 \alias{mlr_tasks_spam}
 \title{Spam Classification Task}
-\format{\link[R6:R6Class]{R6::R6Class} inheriting from \link{TaskClassif}.}
+\format{
+\link[R6:R6Class]{R6::R6Class} inheriting from \link{TaskClassif}.
+}
 \source{
 Creators:
 Mark Hopkins, Erik Reeber, George Forman, Jaap Suermondt.
@@ -27,11 +29,44 @@ tsk("spam")
 }
 }
 
+\section{Meta Information}{
+
+\itemize{
+\item Task type: \dQuote{classif}
+\item Dimensions: 4601x58
+\item Properties: \dQuote{twoclass}
+\item Has Missings: \code{FALSE}
+\item Target: \dQuote{type}
+\item Features: \dQuote{address}, \dQuote{addresses}, \dQuote{all}, \dQuote{business}, \dQuote{capitalAve}, \dQuote{capitalLong}, \dQuote{capitalTotal}, \dQuote{charDollar}, \dQuote{charExclamation}, \dQuote{charHash}, \dQuote{charRoundbracket}, \dQuote{charSemicolon}, \dQuote{charSquarebracket}, \dQuote{conference}, \dQuote{credit}, \dQuote{cs}, \dQuote{data}, \dQuote{direct}, \dQuote{edu}, \dQuote{email}, \dQuote{font}, \dQuote{free}, \dQuote{george}, \dQuote{hp}, \dQuote{hpl}, \dQuote{internet}, \dQuote{lab}, \dQuote{labs}, \dQuote{mail}, \dQuote{make}, \dQuote{meeting}, \dQuote{money}, \dQuote{num000}, \dQuote{num1999}, \dQuote{num3d}, \dQuote{num415}, \dQuote{num650}, \dQuote{num85}, \dQuote{num857}, \dQuote{order}, \dQuote{original}, \dQuote{our}, \dQuote{over}, \dQuote{parts}, \dQuote{people}, \dQuote{pm}, \dQuote{project}, \dQuote{re}, \dQuote{receive}, \dQuote{remove}, \dQuote{report}, \dQuote{table}, \dQuote{technology}, \dQuote{telnet}, \dQuote{will}, \dQuote{you}, \dQuote{your}
+}
+}
+
 \references{
-\cite{mlr3}{dua_2017}
+Dua, Dheeru, Graff, Casey (2017).
+\dQuote{UCI Machine Learning Repository.}
+\url{http://archive.ics.uci.edu/ml/}.
 }
 \seealso{
 \link[mlr3misc:Dictionary]{Dictionary} of \link[=Task]{Tasks}: \link{mlr_tasks}
 
 \code{as.data.table(mlr_tasks)} for a complete table of all (also dynamically created) \link[=Task]{Tasks}.
+
+Other Task: 
+\code{\link{TaskClassif}},
+\code{\link{TaskRegr}},
+\code{\link{TaskSupervised}},
+\code{\link{TaskUnsupervised}},
+\code{\link{Task}},
+\code{\link{mlr_tasks_boston_housing}},
+\code{\link{mlr_tasks_breast_cancer}},
+\code{\link{mlr_tasks_german_credit}},
+\code{\link{mlr_tasks_iris}},
+\code{\link{mlr_tasks_mtcars}},
+\code{\link{mlr_tasks_penguins}},
+\code{\link{mlr_tasks_pima}},
+\code{\link{mlr_tasks_sonar}},
+\code{\link{mlr_tasks_wine}},
+\code{\link{mlr_tasks_zoo}},
+\code{\link{mlr_tasks}}
 }
+\concept{Task}

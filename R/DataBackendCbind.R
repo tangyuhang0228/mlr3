@@ -1,8 +1,6 @@
-#' @include DataBackend.R
 DataBackendCbind = R6Class("DataBackendCbind", inherit = DataBackend, cloneable = FALSE,
   public = list(
     initialize = function(b1, b2) {
-
       assert_backend(b1)
       assert_backend(b2)
       pk = b1$primary_key
@@ -22,19 +20,19 @@ DataBackendCbind = R6Class("DataBackendCbind", inherit = DataBackend, cloneable 
     data = function(rows, cols, data_format = self$data_formats[1L]) {
 
       pk = self$primary_key
-      qrows = unique(assert_atomic_vector(rows))
-      qcols = union(assert_names(cols, type = "unique"), self$primary_key)
+      qrows = unique(assert_numeric(rows))
+      qcols = union(assert_names(cols, type = "unique"), pk)
       assert_choice(data_format, self$data_formats)
 
       data = private$.data$b2$data(qrows, qcols, data_format = data_format)
       if (ncol(data) < length(qcols)) {
-        qcols = setdiff(cols, names(data))
-        tmp = private$.data$b1$data(qrows, union(qcols, pk), data_format = data_format)
+        qcols = c(setdiff(cols, names(data)), pk)
+        tmp = private$.data$b1$data(qrows, qcols, data_format = data_format)
         data = merge(data, tmp, by = pk, all = TRUE, sort = TRUE)
       }
 
       # duplicate rows / reorder columns
-      data[list(rows), intersect(cols, names(data)), on = pk, with = FALSE, nomatch = 0L]
+      data[list(rows), intersect(cols, names(data)), on = pk, with = FALSE, nomatch = NULL]
     },
 
     head = function(n = 6L) {

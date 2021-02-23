@@ -9,7 +9,7 @@
 #'
 #' This dictionary can get populated with additional resampling strategies by add-on packages.
 #'
-#' For a more convenient way to retrieve and construct resampling strategies, see [rsmp()].
+#' For a more convenient way to retrieve and construct resampling strategies, see [rsmp()]/[rsmps()].
 #'
 #' @section Methods:
 #' See [mlr3misc::Dictionary].
@@ -22,9 +22,7 @@
 #' @family Dictionary
 #' @family Resampling
 #' @seealso
-#' Example resamplings: [`cv`][mlr_resamplings_cv], [`bootstrap`][mlr_resamplings_bootstrap]
-#'
-#' Sugar function: [rsmp()]
+#' Sugar functions: [rsmp()], [rsmps()]
 #' @export
 #' @examples
 #' as.data.table(mlr_resamplings)
@@ -36,9 +34,14 @@ mlr_resamplings = R6Class("DictionaryResampling",
 )$new()
 
 #' @export
-as.data.table.DictionaryResampling = function(x, ...) {
+as.data.table.DictionaryResampling = function(x, ...) { # nolint
+
   setkeyv(map_dtr(x$keys(), function(key) {
-    r = x$get(key)
+    r = tryCatch(x$get(key),
+      missingDefaultError = function(e) NULL)
+    if (is.null(r))
+      return(list(key = key))
+
     list(key = key, params = list(r$param_set$ids()), iters = r$iters)
-  }), "key")[]
+  }, .fill = TRUE), "key")[]
 }

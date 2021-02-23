@@ -1,8 +1,5 @@
 #' @title Resampling Class
 #'
-#' @usage NULL
-#' @format [R6::R6Class] object.
-#'
 #' @description
 #' This is the abstract base class for resampling objects like [ResamplingCV] and [ResamplingBootstrap].
 #'
@@ -12,68 +9,13 @@
 #' Resampling objects can be instantiated on a [Task], which applies the strategy on the task and manifests in a
 #' fixed partition of `row_ids` of the [Task].
 #'
-#' Predefined resamplings are stored in the [mlr3misc::Dictionary] [mlr_resamplings],
+#' Predefined resamplings are stored in the [dictionary][mlr3misc::Dictionary] [mlr_resamplings],
 #' e.g. [`cv`][mlr_resamplings_cv] or [`bootstrap`][mlr_resamplings_bootstrap].
 #'
-#' @section Construction:
-#' Note: This object is typically constructed via a derived classes, e.g. [ResamplingCV] or [ResamplingHoldout].
-#' ```
-#' r = Resampling$new(id, param_set, duplicated_ids = FALSE, man = NA_character_)
-#' ```
 #'
-#' * `id` :: `character(1)`\cr
-#'   Identifier for the resampling strategy.
-#'
-#' * `param_set` :: [paradox::ParamSet]\cr
-#'   Set of hyperparameters.
-#'
-#' * `duplicated_ids` :: `logical(1)`\cr
-#'   Set to `TRUE` if this resampling strategy may have duplicated row ids in a single training set or test set.
-#'
-#' * `man` :: `character(1)`\cr
-#'   String in the format `[pkg]::[topic]` pointing to a manual page for this object.
-#'
-#' @section Fields:
-#' All variables passed to the constructor, and additionally:
-#'
-#' * `iters` :: `integer(1)`\cr
-#'   Return the number of resampling iterations, depending on the values stored in the `param_set`.
-#'
-#' * `instance` :: `any`\cr
-#'   During `instantiate()`, the instance is stored in this slot.
-#'   The instance can be in any arbitrary format.
-#'
-#' * `is_instantiated` :: `logical(1)`\cr
-#'   Is `TRUE`, if the resampling has been instantiated.
-#'
-#' * `task_hash` :: `character(1)`\cr
-#'   The hash of the [Task] which was passed to `r$instantiate()`.
-#'
-#' * `task_nrow` :: `integer(1)`\cr
-#'   The number of observations of the [Task] which was passed to `r$instantiate()`.
-#'
-#' * `hash` :: `character(1)`\cr
-#'   Hash (unique identifier) for this object.
-#'
-#'   E.g., this is `TRUE` for Bootstrap, and `FALSE` for cross validation.
-#'   Only used internally.
-#'
-#' @section Methods:
-#' * `instantiate(task)`\cr
-#'   [Task] -> `self`\cr
-#'   Materializes fixed training and test splits for a given task and stores them in `r$instance`.
-#'
-#' * `train_set(i)`\cr
-#'   `integer(1)` -> (`integer()` | `character()`)\cr
-#'   Returns the row ids of the i-th training set.
-#'
-#' * `test_set(i)`\cr
-#'   `integer(1)` -> (`integer()` | `character()`)\cr
-#'   Returns the row ids of the i-th test set.
-#'
-#' * `help()`\cr
-#'   () -> `NULL`\cr
-#'   Opens the corresponding help page referenced by `$man`.
+#' @template param_id
+#' @template param_param_set
+#' @template param_man
 #'
 #' @section Stratification:
 #' All derived classes support stratified sampling.
@@ -85,7 +27,8 @@
 #'
 #' Second, the sampling is performed in each of the `k` subpopulations separately.
 #' Each subgroup is divided into `iter` training sets and `iter` test sets by the derived `Resampling`.
-#' These sets are merged based on their iteration number: all training sets from all subpopulations with iteration 1 are combined, then all training sets with iteration 2, and so on.
+#' These sets are merged based on their iteration number:
+#' all training sets from all subpopulations with iteration 1 are combined, then all training sets with iteration 2, and so on.
 #' Same is done for all test sets.
 #' The merged sets can be accessed via `$train_set(i)` and `$test_set(i)`, respectively.
 #'
@@ -101,6 +44,7 @@
 #' Next, the grouping information is replaced with the respective row ids to generate training and test sets.
 #' The sets can be accessed via `$train_set(i)` and `$test_set(i)`, respectively.
 #'
+#'
 #' @family Resampling
 #' @template seealso_resampling
 #' @export
@@ -114,8 +58,8 @@
 #' r$param_set$values = list(ratio = 0.1, repeats = 3)
 #' r$param_set$values
 #'
-#' # Instantiate on iris task
-#' task = tsk("iris")
+#' # Instantiate on penguins task
+#' task = tsk("penguins")
 #' r$instantiate(task)
 #'
 #' # Extract train/test sets
@@ -137,14 +81,46 @@
 #' prop.table(table(task$truth(r$train_set(1)))) # roughly same proportion
 Resampling = R6Class("Resampling",
   public = list(
+    #' @template field_id
     id = NULL,
+
+    #' @template field_param_set
     param_set = NULL,
+
+    #' @field instance (`any`)\cr
+    #'   During `instantiate()`, the instance is stored in this slot in an arbitrary format.
+    #'   Note that if a grouping variable is present in the [Task], a [Resampling] may operate on the
+    #'   group ids internally instead of the row ids (which may lead to confusion).
+    #'
+    #'   It is advised to not work directly with the `instance`, but instead only use the getters
+    #'   `$train_set()` and `$test_set()`.
     instance = NULL,
+
+    #' @field task_hash (`character(1)`)\cr
+    #'   The hash of the [Task] which was passed to `r$instantiate()`.
     task_hash = NA_character_,
+
+    #' @field task_nrow (`integer(1)`)\cr
+    #'   The number of observations of the [Task] which was passed to `r$instantiate()`.
+    #'
     task_nrow = NA_integer_,
+
+    #' @field duplicated_ids (`logical(1)`)\cr
+    #'   If `TRUE`, duplicated rows can occur within a single training set or within a single test set.
+    #'   E.g., this is `TRUE` for Bootstrap, and `FALSE` for cross-validation.
+    #'   Only used internally.
     duplicated_ids = NULL,
+
+    #' @template field_man
     man = NULL,
 
+    #' @description
+    #' Creates a new instance of this [R6][R6::R6Class] class.
+    #'
+    #' @param duplicated_ids (`logical(1)`)\cr
+    #'   Set to `TRUE` if this resampling strategy may have duplicated row ids in a single training set or test set.
+    #'
+    #' Note that this object is typically constructed via a derived classes, e.g. [ResamplingCV] or [ResamplingHoldout].
     initialize = function(id, param_set = ParamSet$new(), duplicated_ids = FALSE, man = NA_character_) {
       self$id = assert_string(id, min.chars = 1L)
       self$param_set = assert_param_set(param_set)
@@ -152,10 +128,15 @@ Resampling = R6Class("Resampling",
       self$man = assert_string(man, na.ok = TRUE)
     },
 
+    #' @description
+    #' Helper for print outputs.
     format = function() {
       sprintf("<%s>", class(self)[1L])
     },
 
+    #' @description
+    #' Printer.
+    #' @param ... (ignored).
     print = function(...) {
       pv = self$param_set$values
       catf("%s with %i iterations", format(self), self$iters)
@@ -163,6 +144,23 @@ Resampling = R6Class("Resampling",
       catf(str_indent("* Parameters:", as_short_string(pv, 1000L)))
     },
 
+    #' @description
+    #' Opens the corresponding help page referenced by field `$man`.
+    help = function() {
+      open_help(self$man)
+    },
+
+    #' @description
+    #' Materializes fixed training and test splits for a given task and stores them in `r$instance`
+    #' in an arbitrary format.
+    #'
+    #' @param task ([Task])\cr
+    #'   Task used for instantiation.
+    #'
+    #' @return
+    #' Returns the object itself, but modified **by reference**.
+    #' You need to explicitly `$clone()` the object beforehand if you want to keeps
+    #' the object in its previous state.
     instantiate = function(task) {
       task = assert_task(as_task(task))
       strata = task$strata
@@ -170,7 +168,7 @@ Resampling = R6Class("Resampling",
 
       if (is.null(strata)) {
         if (is.null(groups)) {
-          instance = private$.sample(task$row_ids)
+          instance = private$.sample(task$row_ids, task)
         } else {
           private$.groups = groups
           instance = private$.sample(unique(groups$group))
@@ -179,7 +177,7 @@ Resampling = R6Class("Resampling",
         if (!is.null(groups)) {
           stopf("Cannot combine stratification with grouping")
         }
-        instance = private$.combine(lapply(strata$row_id, private$.sample))
+        instance = private$.combine(lapply(strata$row_id, private$.sample, task = task))
       }
 
       self$instance = instance
@@ -188,21 +186,38 @@ Resampling = R6Class("Resampling",
       invisible(self)
     },
 
+    #' @description
+    #' Returns the row ids of the i-th training set.
+    #'
+    #' @param i (`integer(1)`)\cr
+    #'   Iteration.
+    #' @return (`integer()`) of row ids.
     train_set = function(i) {
       private$.get_set(private$.get_train, i)
     },
 
+    #' @description
+    #' Returns the row ids of the i-th test set.
+    #'
+    #' @param i (`integer(1)`)\cr
+    #'   Iteration.
+    #' @return (`integer()`) of row ids.
     test_set = function(i) {
       private$.get_set(private$.get_test, i)
     }
   ),
 
   active = list(
-    is_instantiated = function() {
+    #' @field is_instantiated (`logical(1)`)\cr
+    #'   Is `TRUE` if the resampling has been instantiated.
+    is_instantiated = function(rhs) {
+      assert_ro_binding(rhs)
       !is.null(self$instance)
     },
 
-    hash = function() {
+    #' @template field_hash
+    hash = function(rhs) {
+      assert_ro_binding(rhs)
       hash(list(class(self), self$id, self$param_set$values, self$instance))
     }
   ),
@@ -217,8 +232,25 @@ Resampling = R6Class("Resampling",
       i = assert_int(i, lower = 1L, upper = self$iters, coerce = TRUE)
       ids = getter(i)
 
-      if (is.null(private$.groups)) ids else private$.groups[list(ids), on = "group"][[1L]]
+      if (is.null(private$.groups)) {
+        return(ids)
+      }
+
+      private$.groups[list(ids), on = "group", allow.cartesian = TRUE][[1L]]
     }
   )
 )
 
+
+#' @export
+as.data.table.Resampling = function(x, ...) { # nolint
+  assert_resampling(x, instantiated = TRUE)
+  iterations = seq_len(x$iters)
+
+  tab = rbindlist(list(
+    map_dtr(iterations, function(i) list(row_id = x$train_set(i)), .idcol = "iteration"),
+    map_dtr(iterations, function(i) list(row_id = x$test_set(i)), .idcol = "iteration")
+  ), idcol = "set")
+  set(tab, j = "set", value = factor(c("train", "test")[tab$set], levels = c("train", "test")))
+  setkeyv(tab, c("set", "iteration"))[]
+}

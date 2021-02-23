@@ -3,9 +3,11 @@
 \name{mlr_tasks_pima}
 \alias{mlr_tasks_pima}
 \title{Pima Indian Diabetes Classification Task}
-\format{\link[R6:R6Class]{R6::R6Class} inheriting from \link{TaskClassif}.}
+\format{
+\link[R6:R6Class]{R6::R6Class} inheriting from \link{TaskClassif}.
+}
 \description{
-A classification task for the \link[mlbench:PimaIndiansDiabetes2]{mlbench::PimaIndiansDiabetes2} data set.
+A classification task for the \link[mlbench:PimaIndiansDiabetes]{mlbench::PimaIndiansDiabetes2} data set.
 Positive class is set to \code{"pos"}.
 }
 \section{Construction}{
@@ -14,8 +16,39 @@ tsk("pima")
 }
 }
 
+\section{Meta Information}{
+
+\itemize{
+\item Task type: \dQuote{classif}
+\item Dimensions: 768x9
+\item Properties: \dQuote{twoclass}
+\item Has Missings: \code{TRUE}
+\item Target: \dQuote{diabetes}
+\item Features: \dQuote{age}, \dQuote{glucose}, \dQuote{insulin}, \dQuote{mass}, \dQuote{pedigree}, \dQuote{pregnant}, \dQuote{pressure}, \dQuote{triceps}
+}
+}
+
 \seealso{
 \link[mlr3misc:Dictionary]{Dictionary} of \link[=Task]{Tasks}: \link{mlr_tasks}
 
 \code{as.data.table(mlr_tasks)} for a complete table of all (also dynamically created) \link[=Task]{Tasks}.
+
+Other Task: 
+\code{\link{TaskClassif}},
+\code{\link{TaskRegr}},
+\code{\link{TaskSupervised}},
+\code{\link{TaskUnsupervised}},
+\code{\link{Task}},
+\code{\link{mlr_tasks_boston_housing}},
+\code{\link{mlr_tasks_breast_cancer}},
+\code{\link{mlr_tasks_german_credit}},
+\code{\link{mlr_tasks_iris}},
+\code{\link{mlr_tasks_mtcars}},
+\code{\link{mlr_tasks_penguins}},
+\code{\link{mlr_tasks_sonar}},
+\code{\link{mlr_tasks_spam}},
+\code{\link{mlr_tasks_wine}},
+\code{\link{mlr_tasks_zoo}},
+\code{\link{mlr_tasks}}
 }
+\concept{Task}

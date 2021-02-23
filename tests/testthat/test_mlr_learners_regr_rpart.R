@@ -1,9 +1,12 @@
-context("mlr_learners_regr_rpart")
-
 test_that("autotest", {
   learner = lrn("regr.rpart")
   expect_learner(learner)
   result = run_autotest(learner)
+  expect_true(result, info = result$error)
+
+  exclude = c("formula", "data", "weights", "subset", "na.action", "method", "model",
+    "x", "y", "parms", "control", "cost")
+  result = run_paramtest(learner, rpart::rpart, exclude)
   expect_true(result, info = result$error)
 })
 

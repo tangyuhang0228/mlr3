@@ -3,7 +3,9 @@
 \name{mlr_tasks_wine}
 \alias{mlr_tasks_wine}
 \title{Wine Classification Task}
-\format{\link[R6:R6Class]{R6::R6Class} inheriting from \link{TaskClassif}.}
+\format{
+\link[R6:R6Class]{R6::R6Class} inheriting from \link{TaskClassif}.
+}
 \source{
 Original owners:
 Forina, M. et al, PARVUS - An Extendible Package for Data Exploration, Classification and Correlation.
@@ -22,11 +24,44 @@ tsk("wine")
 }
 }
 
+\section{Meta Information}{
+
+\itemize{
+\item Task type: \dQuote{classif}
+\item Dimensions: 178x14
+\item Properties: \dQuote{multiclass}
+\item Has Missings: \code{FALSE}
+\item Target: \dQuote{type}
+\item Features: \dQuote{alcalinity}, \dQuote{alcohol}, \dQuote{ash}, \dQuote{color}, \dQuote{dilution}, \dQuote{flavanoids}, \dQuote{hue}, \dQuote{magnesium}, \dQuote{malic}, \dQuote{nonflavanoids}, \dQuote{phenols}, \dQuote{proanthocyanins}, \dQuote{proline}
+}
+}
+
 \references{
-\cite{mlr3}{dua_2017}
+Dua, Dheeru, Graff, Casey (2017).
+\dQuote{UCI Machine Learning Repository.}
+\url{http://archive.ics.uci.edu/ml/}.
 }
 \seealso{
 \link[mlr3misc:Dictionary]{Dictionary} of \link[=Task]{Tasks}: \link{mlr_tasks}
 
 \code{as.data.table(mlr_tasks)} for a complete table of all (also dynamically created) \link[=Task]{Tasks}.
+
+Other Task: 
+\code{\link{TaskClassif}},
+\code{\link{TaskRegr}},
+\code{\link{TaskSupervised}},
+\code{\link{TaskUnsupervised}},
+\code{\link{Task}},
+\code{\link{mlr_tasks_boston_housing}},
+\code{\link{mlr_tasks_breast_cancer}},
+\code{\link{mlr_tasks_german_credit}},
+\code{\link{mlr_tasks_iris}},
+\code{\link{mlr_tasks_mtcars}},
+\code{\link{mlr_tasks_penguins}},
+\code{\link{mlr_tasks_pima}},
+\code{\link{mlr_tasks_sonar}},
+\code{\link{mlr_tasks_spam}},
+\code{\link{mlr_tasks_zoo}},
+\code{\link{mlr_tasks}}
 }
+\concept{Task}

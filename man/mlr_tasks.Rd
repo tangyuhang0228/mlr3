@@ -4,14 +4,18 @@
 \name{mlr_tasks}
 \alias{mlr_tasks}
 \title{Dictionary of Tasks}
-\format{\link[R6:R6Class]{R6::R6Class} object inheriting from \link[mlr3misc:Dictionary]{mlr3misc::Dictionary}.}
+\format{
+\link[R6:R6Class]{R6::R6Class} object inheriting from \link[mlr3misc:Dictionary]{mlr3misc::Dictionary}.
+}
 \description{
 A simple \link[mlr3misc:Dictionary]{mlr3misc::Dictionary} storing objects of class \link{Task}.
 Each task has an associated help page, see \code{mlr_tasks_[id]}.
 
-This dictionary can get populated with additional tasks by add-on packages.
+This dictionary can get populated with additional tasks by add-on packages,
+e.g. \CRANpkg{mlr3data}, \CRANpkg{mlr3proba} or \CRANpkg{mlr3cluster}.
+\CRANpkg{mlr3oml} allows to interact with \href{https://www.openml.org}{OpenML}.
 
-For a more convenient way to retrieve and construct tasks, see \code{\link[=tsk]{tsk()}}.
+For a more convenient way to retrieve and construct tasks, see \code{\link[=tsk]{tsk()}}/\code{\link[=tsks]{tsks()}}.
 }
 \section{Methods}{
 
@@ -30,30 +34,30 @@ the number of features of type \code{"lgl"}, \code{"int"}, \code{"dbl"}, \code{"
 
 \examples{
 as.data.table(mlr_tasks)
-task = mlr_tasks$get("iris") # same as tsk("iris")
+task = mlr_tasks$get("penguins") # same as tsk("penguins")
 head(task$data())
 
-# Add a new task, based on a subset of iris:
-data = iris
-data$Species = factor(ifelse(data$Species == "setosa", "1", "0"))
-task = TaskClassif$new("iris.binary", data, target = "Species", positive = "1")
+# Add a new task, based on a subset of penguins:
+data = palmerpenguins::penguins
+data$species = factor(ifelse(data$species == "Adelie", "1", "0"))
+task = TaskClassif$new("penguins.binary", data, target = "species", positive = "1")
 
 # add to dictionary
-mlr_tasks$add("iris.binary", task)
+mlr_tasks$add("penguins.binary", task)
 
 # list available tasks
 mlr_tasks$keys()
 
 # retrieve from dictionary
-mlr_tasks$get("iris.binary")
+mlr_tasks$get("penguins.binary")
 
 # remove task again
-mlr_tasks$remove("iris.binary")
+mlr_tasks$remove("penguins.binary")
 }
 \seealso{
-Example tasks: \code{\link[=mlr_tasks_iris]{iris}} (multi-class classification), \code{\link[=mlr_tasks_spam]{spam}} (binary classification), \code{\link[=mlr_tasks_boston_housing]{boston_housing}} (regression)
+Sugar functions: \code{\link[=tsk]{tsk()}}, \code{\link[=tsks]{tsks()}}
 
-Sugar function: \code{\link[=tsk]{tsk()}}
+Extension Packages: \CRANpkg{mlr3data}
 
 Other Dictionary: 
 \code{\link{mlr_learners}},
@@ -65,7 +69,19 @@ Other Task:
 \code{\link{TaskClassif}},
 \code{\link{TaskRegr}},
 \code{\link{TaskSupervised}},
-\code{\link{Task}}
+\code{\link{TaskUnsupervised}},
+\code{\link{Task}},
+\code{\link{mlr_tasks_boston_housing}},
+\code{\link{mlr_tasks_breast_cancer}},
+\code{\link{mlr_tasks_german_credit}},
+\code{\link{mlr_tasks_iris}},
+\code{\link{mlr_tasks_mtcars}},
+\code{\link{mlr_tasks_penguins}},
+\code{\link{mlr_tasks_pima}},
+\code{\link{mlr_tasks_sonar}},
+\code{\link{mlr_tasks_spam}},
+\code{\link{mlr_tasks_wine}},
+\code{\link{mlr_tasks_zoo}}
 }
 \concept{Dictionary}
 \concept{Task}

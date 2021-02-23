@@ -11,18 +11,16 @@
 #' * Creates a [Prediction] object by calling `learner$predict_newdata()`.
 #' * Returns (subset of) [Prediction].
 #'
-#'
-#'
-#' @param object :: [Learner]\cr
+#' @param object ([Learner])\cr
 #'   Any [Learner].
-#' @param newdata :: [data.frame()]\cr
+#' @param newdata ([data.frame()])\cr
 #'   New data to predict on.
-#' @param predict_type :: `character(1)`\cr
+#' @param predict_type (`character(1)`)\cr
 #'   The predict type to return.
 #'   Set to `<Prediction>` to retrieve the complete [Prediction] object.
 #'   If set to `NULL` (default), the first predict type for the respective class of the [Learner]
 #'   as stored in [mlr_reflections] is used.
-#' @param ... :: `any`\cr
+#' @param ... (`any`)\cr
 #'   Hyperparameters to pass down to the [Learner].
 #'
 #' @export

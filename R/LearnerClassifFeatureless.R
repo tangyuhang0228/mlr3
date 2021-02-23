@@ -1,16 +1,7 @@
 #' @title Featureless Classification Learner
 #'
-#' @usage NULL
 #' @name mlr_learners_classif.featureless
-#' @format [R6::R6Class] inheriting from [LearnerClassif].
 #' @include LearnerClassif.R
-#'
-#' @section Construction:
-#' ```
-#' LearnerClassifFeatureless$new()
-#' mlr_learners$get("classif.featureless")
-#' lrn("classif.featureless")
-#' ```
 #'
 #' @description
 #' A simple [LearnerClassif] which only analyses the labels during train, ignoring all features.
@@ -18,31 +9,63 @@
 #' \describe{
 #'   \item{mode:}{Predicts the most frequent label. If there are two or more labels tied, randomly selects one per prediction.}
 #'   \item{sample:}{Randomly predict a label uniformly.}
-#'   \item{weighed.sample:}{Randomly predict a label, with probability estimated from the training distribution.}
+#'   \item{weighted.sample:}{Randomly predict a label, with probability estimated from the training distribution.}
 #' }
+#'
+#' @templateVar id classif.featureless
+#' @template section_dictionary_learner
+#'
+#' @section Meta Information:
+#' `r rd_info(lrn("classif.featureless"))`
+#'
+#' @section Parameters:
+#' `r rd_info(lrn("classif.featureless")$param_set)`
+#'
 #' @template seealso_learner
 #' @export
 LearnerClassifFeatureless = R6Class("LearnerClassifFeatureless", inherit = LearnerClassif,
   public = list(
+    #' @description
+    #' Creates a new instance of this [R6][R6::R6Class] class.
     initialize = function() {
       ps = ParamSet$new(list(ParamFct$new("method", levels = c("mode", "sample", "weighted.sample"), default = "mode", tags = "predict")))
       ps$values = list(method = "mode")
       super$initialize(
         id = "classif.featureless",
-        feature_types = c("logical", "integer", "numeric", "character", "factor", "ordered"),
+        feature_types = mlr_reflections$task_feature_types,
         predict_types = c("response", "prob"),
         param_set = ps,
-        properties = c("twoclass", "multiclass", "missings", "importance", "selected_features"),
+        properties = c("featureless", "twoclass", "multiclass", "missings", "importance", "selected_features"),
         man = "mlr3::mlr_learners_classif.featureless"
       )
     },
 
-    train_internal = function(task) {
+    #' @description
+    #' All features have a score of `0` for this learner.
+    #' @return Named `numeric()`.
+    importance = function() {
+      if (is.null(self$model)) {
+        stopf("No model stored")
+      }
+      fn = self$model$features
+      named_vector(fn, 0)
+    },
+
+    #' @description
+    #' Selected features are always the empty set for this learner.
+    #' @return `character(0)`.
+    selected_features = function() {
+      character()
+    }
+  ),
+
+  private = list(
+    .train = function(task) {
       tn = task$target_names
       set_class(list(tab = table(task$data(cols = tn)[[1L]]), features = task$feature_names), "classif.featureless_model")
     },
 
-    predict_internal = function(task) {
+    .predict = function(task) {
       pv = self$param_set$get_values(tags = "predict")
       tab = self$model$tab
       n = task$nrow
@@ -54,7 +77,7 @@ LearnerClassifFeatureless = R6Class("LearnerClassifFeatureless", inherit = Learn
           sample = sample(names(tab), n, replace = TRUE),
           weighted.sample = sample(names(tab), n, replace = TRUE, prob = tab)
         )
-        PredictionClassif$new(task, response = response)
+        list(response = response)
       } else {
         prob = switch(pv$method,
           mode = {
@@ -66,20 +89,8 @@ LearnerClassifFeatureless = R6Class("LearnerClassifFeatureless", inherit = Learn
         )
         prob = matrix(prob, nrow = n, ncol = length(tab), byrow = TRUE)
         colnames(prob) = names(tab)
-        PredictionClassif$new(task = task, prob = prob)
+        list(prob = prob)
       }
-    },
-
-    importance = function() {
-      if (is.null(self$model)) {
-        stopf("No model stored")
-      }
-      fn = self$model$features
-      named_vector(fn, 0)
-    },
-
-    selected_features = function() {
-      character()
     }
   )
 )

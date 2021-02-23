@@ -4,17 +4,20 @@
 #' @format [R6::R6Class] inheriting from [TaskClassif].
 #' @include mlr_tasks.R
 #'
+#' @description
+#' Spam data set from the UCI machine learning repository (\url{http://archive.ics.uci.edu/ml/datasets/spambase}).
+#' Data set collected at Hewlett-Packard Labs to classify emails as spam or non-spam.
+#' 57 variables indicate the frequency of certain words and characters in the e-mail.
+#' The positive class is set to "spam".
+#'
 #' @section Construction:
 #' ```
 #' mlr_tasks$get("spam")
 #' tsk("spam")
 #' ```
 #'
-#' @description
-#' Spam data set from the UCI machine learning repository (\url{http://archive.ics.uci.edu/ml/datasets/spambase}).
-#' Data set collected at Hewlett-Packard Labs to classify emails as spam or non-spam.
-#' 57 variables indicate the frequency of certain words and characters in the e-mail.
-#' The positive class is set to "spam".
+#' @section Meta Information:
+#' `r rd_info(tsk("spam"))`
 #'
 #' @source
 #' Creators:
@@ -28,7 +31,7 @@
 #' Columns have been renamed. Preprocessed data taken from the \CRANpkg{kernlab} package.
 #'
 #' @references
-#' \cite{mlr3}{dua_2017}
+#' `r format_bib("dua_2017")`
 #'
 #' @template seealso_task
 NULL

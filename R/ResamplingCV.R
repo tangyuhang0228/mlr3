@@ -1,35 +1,26 @@
-#' @title Cross Validation Resampling
+#' @title Cross-Validation Resampling
 #'
-#' @usage NULL
 #' @name mlr_resamplings_cv
-#' @format [R6::R6Class] inheriting from [Resampling].
 #' @include Resampling.R
-#'
-#' @section Construction:
-#' ```
-#' ResamplingCV$new()
-#' mlr_resamplings$get("cv")
-#' rsmp("cv")
-#' ```
 #'
 #' @description
 #' Splits data using a `folds`-folds (default: 10 folds) cross-validation.
 #'
-#' @section Fields:
-#' See [Resampling].
-#'
-#' @section Methods:
-#' See [Resampling].
+#' @templateVar id cv
+#' @template section_dictionary_resampling
 #'
 #' @section Parameters:
-#' * `folds` :: `integer(1)`\cr
+#' * `folds` (`integer(1)`)\cr
 #'   Number of folds.
+#'
+#' @references
+#' `r format_bib("bischl_2012")`
 #'
 #' @template seealso_resampling
 #' @export
 #' @examples
 #' # Create a task with 10 observations
-#' task = tsk("iris")
+#' task = tsk("penguins")
 #' task$filter(1:10)
 #'
 #' # Instantiate Resampling
@@ -45,9 +36,11 @@
 #' rcv$instance # table
 ResamplingCV = R6Class("ResamplingCV", inherit = Resampling,
   public = list(
+    #' @description
+    #' Creates a new instance of this [R6][R6::R6Class] class.
     initialize = function() {
       ps = ParamSet$new(list(
-        ParamInt$new("folds", lower = 1L, tags = "required")
+        ParamInt$new("folds", lower = 2L, tags = "required")
       ))
       ps$values = list(folds = 10L)
 
@@ -56,13 +49,15 @@ ResamplingCV = R6Class("ResamplingCV", inherit = Resampling,
   ),
 
   active = list(
-    iters = function() {
+    #' @template field_iters
+    iters = function(rhs) {
+      assert_ro_binding(rhs)
       as.integer(self$param_set$values$folds)
     }
   ),
 
   private = list(
-    .sample = function(ids) {
+    .sample = function(ids, ...) {
       data.table(
         row_id = ids,
         fold = shuffle(seq_along0(ids) %% as.integer(self$param_set$values$folds) + 1L),
@@ -83,7 +78,11 @@ ResamplingCV = R6Class("ResamplingCV", inherit = Resampling,
     },
 
     deep_clone = function(name, value) {
-      if (name == "instance") copy(value) else value
+      switch(name,
+        "instance" = copy(value),
+        "param_set" = value$clone(deep = TRUE),
+        value
+      )
     }
   )
 )

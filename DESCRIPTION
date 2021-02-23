@@ -1,6 +1,6 @@
 Package: mlr3
 Title: Machine Learning in R - Next Generation
-Version: 0.1.6-9000
+Version: 0.11.0
 Authors@R:
     c(person(given = "Michel",
              family = "Lang",
@@ -40,7 +40,12 @@ Authors@R:
       person(given = "Martin",
              family = "Binder",
              role = "aut",
-             email = "mlr.developer@mb706.com"))
+             email = "mlr.developer@mb706.com"),
+      person(given = "Marc",
+             family = "Becker",
+             role = "ctb",
+             email = "marcbecker@posteo.de",
+             comment = c(ORCID = "0000-0002-8115-0400")))
 Description: Efficient, object-oriented programming on the
     building blocks of machine learning. Provides 'R6' objects for tasks,
     learners, resamplings, and measures. The package is geared towards
@@ -54,36 +59,39 @@ BugReports: https://github.com/mlr-org/mlr3/issues
 Depends:
     R (>= 3.1.0)
 Imports:
+    R6 (>= 2.4.1),
     backports,
-    checkmate (>= 1.9.3),
-    data.table,
+    checkmate (>= 2.0.0),
+    data.table (>= 1.13.6),
     digest,
-    lgr (>= 0.3.0),
+    future.apply (>= 1.5.0),
+    lgr (>= 0.3.4),
     mlbench,
-    mlr3measures (>= 0.1.1),
-    mlr3misc (>= 0.1.6),
-    paradox,
-    R6,
+    mlr3measures (>= 0.3.0),
+    mlr3misc (>= 0.7.0),
+    parallelly,
+    palmerpenguins,
+    paradox (>= 0.6.0),
     uuid
 Suggests:
-    bibtex,
+    Matrix,
     callr,
     datasets,
+    distr6,
     evaluate,
-    future (>= 1.9.0),
-    future.apply (>= 1.1.0),
+    future,
     future.callr,
-    Matrix,
+    mlr3data,
+    progressr,
     rpart,
-    testthat,
-    titanic
-RdMacros:
-    mlr3misc
+    testthat (>= 3.0.0)
 Encoding: UTF-8
 LazyData: true
+Config/testthat/edition: 3
+Config/testthat/parallel: true
 NeedsCompilation: no
-Roxygen: list(markdown = TRUE, r6 = FALSE)
-RoxygenNote: 7.0.2
+Roxygen: list(markdown = TRUE, r6 = TRUE)
+RoxygenNote: 7.1.1
 Collate:
     'mlr_reflections.R'
     'BenchmarkResult.R'
@@ -114,6 +122,9 @@ Collate:
     'MeasureSimple.R'
     'Prediction.R'
     'PredictionClassif.R'
+    'PredictionData.R'
+    'PredictionDataClassif.R'
+    'PredictionDataRegr.R'
     'PredictionRegr.R'
     'ResampleResult.R'
     'Resampling.R'
@@ -122,14 +133,19 @@ Collate:
     'ResamplingCV.R'
     'ResamplingCustom.R'
     'ResamplingHoldout.R'
+    'ResamplingInsample.R'
+    'ResamplingLOO.R'
     'ResamplingRepeatedCV.R'
     'ResamplingSubsampling.R'
+    'ResultData.R'
     'Task.R'
     'TaskSupervised.R'
     'TaskClassif.R'
     'mlr_tasks.R'
+    'TaskClassif_breast_cancer.R'
     'TaskClassif_german_credit.R'
     'TaskClassif_iris.R'
+    'TaskClassif_penguins.R'
     'TaskClassif_pima.R'
     'TaskClassif_sonar.R'
     'TaskClassif_spam.R'
@@ -138,23 +154,45 @@ Collate:
     'TaskGenerator.R'
     'mlr_task_generators.R'
     'TaskGenerator2DNormals.R'
+    'TaskGeneratorCassini.R'
+    'TaskGeneratorCircle.R'
     'TaskGeneratorFriedman1.R'
+    'TaskGeneratorMoons.R'
+    'TaskGeneratorSimplex.R'
     'TaskGeneratorSmiley.R'
+    'TaskGeneratorSpirals.R'
     'TaskGeneratorXor.R'
     'TaskRegr.R'
     'TaskRegr_boston_housing.R'
     'TaskRegr_mtcars.R'
-    'Task_mutators.R'
+    'TaskUnsupervised.R'
+    'as_benchmark_result.R'
     'as_data_backend.R'
+    'as_learner.R'
+    'as_measure.R'
+    'as_prediction.R'
+    'as_prediction_classif.R'
+    'as_prediction_data.R'
+    'as_prediction_regr.R'
+    'as_resample_result.R'
+    'as_resampling.R'
+    'as_result_data.R'
+    'as_task.R'
+    'as_task_classif.R'
+    'as_task_regr.R'
     'assertions.R'
+    'auto_convert.R'
     'benchmark.R'
     'benchmark_grid.R'
+    'bibentries.R'
     'default_measures.R'
+    'fix_factor_levels.R'
     'helper.R'
-    'mlr_coercions.R'
     'mlr_sugar.R'
     'predict.R'
     'reexports.R'
     'resample.R'
+    'set_threads.R'
+    'task_converters.R'
     'worker.R'
     'zzz.R'

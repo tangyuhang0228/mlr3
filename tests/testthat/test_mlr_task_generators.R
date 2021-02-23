@@ -1,5 +1,3 @@
-context("mlr_task_generators")
-
 test_that("mlr_task_generators", {
   expect_dictionary(mlr_task_generators, min_items = 1L, contains = "TaskGenerator")
   keys = mlr_task_generators$keys()
@@ -12,7 +10,9 @@ test_that("mlr_task_generators", {
     task = gen$generate(n)
     expect_task(task)
     expect_equal(gen$task_type, task$task_type)
-    expect_equal(task$nrow, n)
+    if (!inherits(gen, "TaskGeneratorSimplex")) {
+      expect_equal(task$nrow, n)
+    }
   }
 })
 

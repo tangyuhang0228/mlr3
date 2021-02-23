@@ -3,7 +3,6 @@
 \name{TaskClassif}
 \alias{TaskClassif}
 \title{Classification Task}
-\format{\link[R6:R6Class]{R6::R6Class} object inheriting from \link{Task}/\link{TaskSupervised}.}
 \description{
 This task specializes \link{Task} and \link{TaskSupervised} for classification problems.
 The target column is assumed to be a factor.
@@ -15,45 +14,9 @@ Additional task properties include:
 \item \code{"multiclass"}: The task is a multiclass classification problem.
 }
 
-Predefined tasks are stored in the \link[mlr3misc:Dictionary]{mlr3misc::Dictionary} \link{mlr_tasks}.
+Predefined tasks are stored in the \link[mlr3misc:Dictionary]{dictionary} \link{mlr_tasks}.
+More example tasks can be found in this dictionary after loading \CRANpkg{mlr3data}.
 }
-\section{Construction}{
-\preformatted{t = TaskClassif$new(id, backend, target, positive = NULL)
-}
-\itemize{
-\item \code{id} :: \code{character(1)}\cr
-Identifier for the task.
-\item \code{backend} :: \link{DataBackend}\cr
-Either a \link{DataBackend}, or any object which is convertible to a DataBackend with \code{as_data_backend()}.
-E.g., a \code{data.frame()} will be converted to a \link{DataBackendDataTable}.
-\item \code{target} :: \code{character(1)}\cr
-Name of the target column.
-\item \code{positive} :: \code{character(1)}\cr
-Only for binary classification: Name of the positive class.
-The levels of the target columns are reordered accordingly, so that the first element of \verb{$class_names} is the
-positive class, and the second element is the negative class.
-}
-}
-
-\section{Fields}{
-
-All methods from \link{TaskSupervised}, and additionally:
-\itemize{
-\item \code{class_names} :: \code{character()}\cr
-Returns all class labels of the target column.
-\item \code{positive} :: \code{character(1)}\cr
-Stores the positive class for binary classification tasks, and \code{NA} for multiclass tasks.
-To switch the positive class, assign a level to this field.
-\item \code{negative} :: \code{character(1)}\cr
-Stores the negative class for binary classification tasks, and \code{NA} for multiclass tasks.
-}
-}
-
-\section{Methods}{
-
-See \link{TaskSupervised}.
-}
-
 \examples{
 data("Sonar", package = "mlbench")
 task = TaskClassif$new("sonar", backend = Sonar, target = "Class", positive = "M")
@@ -68,12 +31,204 @@ task$positive
 mlr_reflections$task_properties$classif
 }
 \seealso{
-Example classification tasks: \code{\link[=mlr_tasks_iris]{iris}}
-
 Other Task: 
 \code{\link{TaskRegr}},
 \code{\link{TaskSupervised}},
+\code{\link{TaskUnsupervised}},
 \code{\link{Task}},
+\code{\link{mlr_tasks_boston_housing}},
+\code{\link{mlr_tasks_breast_cancer}},
+\code{\link{mlr_tasks_german_credit}},
+\code{\link{mlr_tasks_iris}},
+\code{\link{mlr_tasks_mtcars}},
+\code{\link{mlr_tasks_penguins}},
+\code{\link{mlr_tasks_pima}},
+\code{\link{mlr_tasks_sonar}},
+\code{\link{mlr_tasks_spam}},
+\code{\link{mlr_tasks_wine}},
+\code{\link{mlr_tasks_zoo}},
 \code{\link{mlr_tasks}}
 }
 \concept{Task}
+\section{Super classes}{
+\code{\link[mlr3:Task]{mlr3::Task}} -> \code{\link[mlr3:TaskSupervised]{mlr3::TaskSupervised}} -> \code{TaskClassif}
+}
+\section{Active bindings}{
+\if{html}{\out{<div class="r6-active-bindings">}}
+\describe{
+\item{\code{class_names}}{(\code{character()})\cr
+Returns all class labels of the target column.}
+
+\item{\code{positive}}{(\code{character(1)})\cr
+Stores the positive class for binary classification tasks, and \code{NA} for multiclass tasks.
+To switch the positive class, assign a level to this field.}
+
+\item{\code{negative}}{(\code{character(1)})\cr
+Stores the negative class for binary classification tasks, and \code{NA} for multiclass tasks.}
+}
+\if{html}{\out{</div>}}
+}
+\section{Methods}{
+\subsection{Public methods}{
+\itemize{
+\item \href{#method-new}{\code{TaskClassif$new()}}
+\item \href{#method-data}{\code{TaskClassif$data()}}
+\item \href{#method-truth}{\code{TaskClassif$truth()}}
+\item \href{#method-droplevels}{\code{TaskClassif$droplevels()}}
+\item \href{#method-clone}{\code{TaskClassif$clone()}}
+}
+}
+\if{html}{
+\out{<details ><summary>Inherited methods</summary>}
+\itemize{
+\item \out{<span class="pkg-link" data-pkg="mlr3" data-topic="Task" data-id="cbind">}\href{../../mlr3/html/Task.html#method-cbind}{\code{mlr3::Task$cbind()}}\out{</span>}
+\item \out{<span class="pkg-link" data-pkg="mlr3" data-topic="Task" data-id="filter">}\href{../../mlr3/html/Task.html#method-filter}{\code{mlr3::Task$filter()}}\out{</span>}
+\item \out{<span class="pkg-link" data-pkg="mlr3" data-topic="Task" data-id="format">}\href{../../mlr3/html/Task.html#method-format}{\code{mlr3::Task$format()}}\out{</span>}
+\item \out{<span class="pkg-link" data-pkg="mlr3" data-topic="Task" data-id="formula">}\href{../../mlr3/html/Task.html#method-formula}{\code{mlr3::Task$formula()}}\out{</span>}
+\item \out{<span class="pkg-link" data-pkg="mlr3" data-topic="Task" data-id="head">}\href{../../mlr3/html/Task.html#method-head}{\code{mlr3::Task$head()}}\out{</span>}
+\item \out{<span class="pkg-link" data-pkg="mlr3" data-topic="Task" data-id="help">}\href{../../mlr3/html/Task.html#method-help}{\code{mlr3::Task$help()}}\out{</span>}
+\item \out{<span class="pkg-link" data-pkg="mlr3" data-topic="Task" data-id="levels">}\href{../../mlr3/html/Task.html#method-levels}{\code{mlr3::Task$levels()}}\out{</span>}
+\item \out{<span class="pkg-link" data-pkg="mlr3" data-topic="Task" data-id="missings">}\href{../../mlr3/html/Task.html#method-missings}{\code{mlr3::Task$missings()}}\out{</span>}
+\item \out{<span class="pkg-link" data-pkg="mlr3" data-topic="Task" data-id="print">}\href{../../mlr3/html/Task.html#method-print}{\code{mlr3::Task$print()}}\out{</span>}
+\item \out{<span class="pkg-link" data-pkg="mlr3" data-topic="Task" data-id="rbind">}\href{../../mlr3/html/Task.html#method-rbind}{\code{mlr3::Task$rbind()}}\out{</span>}
+\item \out{<span class="pkg-link" data-pkg="mlr3" data-topic="Task" data-id="rename">}\href{../../mlr3/html/Task.html#method-rename}{\code{mlr3::Task$rename()}}\out{</span>}
+\item \out{<span class="pkg-link" data-pkg="mlr3" data-topic="Task" data-id="select">}\href{../../mlr3/html/Task.html#method-select}{\code{mlr3::Task$select()}}\out{</span>}
+\item \out{<span class="pkg-link" data-pkg="mlr3" data-topic="Task" data-id="set_col_roles">}\href{../../mlr3/html/Task.html#method-set_col_roles}{\code{mlr3::Task$set_col_roles()}}\out{</span>}
+\item \out{<span class="pkg-link" data-pkg="mlr3" data-topic="Task" data-id="set_row_roles">}\href{../../mlr3/html/Task.html#method-set_row_roles}{\code{mlr3::Task$set_row_roles()}}\out{</span>}
+}
+\out{</details>}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-new"></a>}}
+\if{latex}{\out{\hypertarget{method-new}{}}}
+\subsection{Method \code{new()}}{
+Creates a new instance of this \link[R6:R6Class]{R6} class.
+The function \code{\link[=as_task_classif]{as_task_classif()}} provides an alternative way to construct classification tasks.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{TaskClassif$new(id, backend, target, positive = NULL, extra_args = list())}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{id}}{(\code{character(1)})\cr
+Identifier for the new instance.}
+
+\item{\code{backend}}{(\link{DataBackend})\cr
+Either a \link{DataBackend}, or any object which is convertible to a \link{DataBackend} with \code{as_data_backend()}.
+E.g., a \code{data.frame()} will be converted to a \link{DataBackendDataTable}.}
+
+\item{\code{target}}{(\code{character(1)})\cr
+Name of the target column.}
+
+\item{\code{positive}}{(\code{character(1)})\cr
+Only for binary classification: Name of the positive class.
+The levels of the target columns are reordered accordingly, so that the first element of \verb{$class_names} is the
+positive class, and the second element is the negative class.}
+
+\item{\code{extra_args}}{(named \code{list()})\cr
+Named list of constructor arguments, required for converting task types
+via \code{\link[=convert_task]{convert_task()}}.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-data"></a>}}
+\if{latex}{\out{\hypertarget{method-data}{}}}
+\subsection{Method \code{data()}}{
+Calls \verb{$data} from parent class \link{Task} and ensures that levels of the target column
+are in the right order.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{TaskClassif$data(
+  rows = NULL,
+  cols = NULL,
+  data_format = "data.table",
+  ordered = TRUE
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{rows}}{\code{integer()}\cr
+Row indices.}
+
+\item{\code{cols}}{\code{character()}\cr
+Column names.}
+
+\item{\code{data_format}}{(\code{character(1)})\cr
+Desired data format, e.g. \code{"data.table"} or \code{"Matrix"}.}
+
+\item{\code{ordered}}{(\code{logical(1)})\cr
+If \code{TRUE} (default), data is ordered according to the columns with column role \code{"order"}.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Depending on the \link{DataBackend}, but usually a \code{\link[data.table:data.table]{data.table::data.table()}}.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-truth"></a>}}
+\if{latex}{\out{\hypertarget{method-truth}{}}}
+\subsection{Method \code{truth()}}{
+True response for specified \code{row_ids}. Format depends on the task type.
+Defaults to all rows with role \code{"use"}.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{TaskClassif$truth(rows = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{rows}}{\code{integer()}\cr
+Row indices.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+\code{factor()}.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-droplevels"></a>}}
+\if{latex}{\out{\hypertarget{method-droplevels}{}}}
+\subsection{Method \code{droplevels()}}{
+Updates the cache of stored factor levels, removing all levels not present in the current set of active rows.
+\code{cols} defaults to all columns with storage type "factor" or "ordered".
+Also updates the task property \code{"twoclass"}/\code{"multiclass"}.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{TaskClassif$droplevels(cols = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{cols}}{\code{character()}\cr
+Column names.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Modified \code{self}.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-clone}{}}}
+\subsection{Method \code{clone()}}{
+The objects of this class are cloneable with this method.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{TaskClassif$clone(deep = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{deep}}{Whether to make a deep clone.}
+}
+\if{html}{\out{</div>}}
+}
+}
+}

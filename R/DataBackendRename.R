@@ -9,7 +9,7 @@ DataBackendRename = R6Class("DataBackendRename", inherit = DataBackend, cloneabl
       assert_character(old, any.missing = FALSE, unique = TRUE)
       assert_subset(old, b$colnames)
       assert_character(new, any.missing = FALSE, len = length(old))
-      assert_names(new, "strict")
+      assert_names(new, if (allow_utf8_names()) "unique" else "strict")
 
       ii = old != new
       self$old = old[ii]
@@ -17,7 +17,6 @@ DataBackendRename = R6Class("DataBackendRename", inherit = DataBackend, cloneabl
     },
 
     data = function(rows, cols, data_format = self$data_formats[1L]) {
-      assert_atomic_vector(rows)
       assert_names(cols, type = "unique")
       b = private$.data
       cols = map_values(intersect(cols, self$colnames), self$new, self$old)

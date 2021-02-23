@@ -9,7 +9,7 @@
 #'
 #' This dictionary can get populated with additional task generators by add-on packages.
 #'
-#' For a more convenient way to retrieve and construct task generators, see [tgen()].
+#' For a more convenient way to retrieve and construct task generators, see [tgen()]/[tgens()].
 #'
 #' @section Methods:
 #' See [mlr3misc::Dictionary].
@@ -22,9 +22,7 @@
 #' @family Dictionary
 #' @family TaskGenerator
 #' @seealso
-#' Example generators: [`xor`][mlr_task_generators_xor]
-#'
-#' Sugar function: [tgen()]
+#' Sugar functions: [tgen()], [tgens()]
 #' @export
 #' @examples
 #' mlr_task_generators$get("smiley")
@@ -37,7 +35,8 @@ mlr_task_generators = R6Class("DictionaryTaskGenerator",
 #' @export
 as.data.table.DictionaryTaskGenerator = function(x, ...) {
   setkeyv(map_dtr(x$keys(), function(key) {
-    g = x$get(key)
+    g = withCallingHandlers(x$get(key),
+      packageNotFoundWarning = function(w) invokeRestart("muffleWarning"))
     list(
       key = key,
       packages = list(g$packages))

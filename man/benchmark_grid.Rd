@@ -7,11 +7,11 @@
 benchmark_grid(tasks, learners, resamplings)
 }
 \arguments{
-\item{tasks}{:: list of \link{Task}.}
+\item{tasks}{(list of \link{Task}).}
 
-\item{learners}{:: list of \link{Learner}.}
+\item{learners}{(list of \link{Learner}).}
 
-\item{resamplings}{:: list of \link{Resampling}.}
+\item{resamplings}{(list of \link{Resampling}).}
 }
 \value{
 (\code{\link[data.table:data.table]{data.table::data.table()}}) with the cross product of the input vectors.
@@ -24,7 +24,7 @@ Resampling strategies are not allowed to be instantiated when passing the argume
 The only exception to this rule applies if all tasks have exactly the same number of rows, and the resamplings are all instantiated for such tasks.
 }
 \examples{
-tasks = list(tsk("iris"), tsk("sonar"))
+tasks = list(tsk("penguins"), tsk("sonar"))
 learners = list(lrn("classif.featureless"), lrn("classif.rpart"))
 resamplings = list(rsmp("cv"), rsmp("subsampling"))
 benchmark_grid(tasks, learners, resamplings)

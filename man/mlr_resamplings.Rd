@@ -4,14 +4,16 @@
 \name{mlr_resamplings}
 \alias{mlr_resamplings}
 \title{Dictionary of Resampling Strategies}
-\format{\link[R6:R6Class]{R6::R6Class} object inheriting from \link[mlr3misc:Dictionary]{mlr3misc::Dictionary}.}
+\format{
+\link[R6:R6Class]{R6::R6Class} object inheriting from \link[mlr3misc:Dictionary]{mlr3misc::Dictionary}.
+}
 \description{
 A simple \link[mlr3misc:Dictionary]{mlr3misc::Dictionary} storing objects of class \link{Resampling}.
 Each resampling has an associated help page, see \code{mlr_resamplings_[id]}.
 
 This dictionary can get populated with additional resampling strategies by add-on packages.
 
-For a more convenient way to retrieve and construct resampling strategies, see \code{\link[=rsmp]{rsmp()}}.
+For a more convenient way to retrieve and construct resampling strategies, see \code{\link[=rsmp]{rsmp()}}/\code{\link[=rsmps]{rsmps()}}.
 }
 \section{Methods}{
 
@@ -33,9 +35,7 @@ mlr_resamplings$get("cv")
 rsmp("subsampling")
 }
 \seealso{
-Example resamplings: \code{\link[=mlr_resamplings_cv]{cv}}, \code{\link[=mlr_resamplings_bootstrap]{bootstrap}}
-
-Sugar function: \code{\link[=rsmp]{rsmp()}}
+Sugar functions: \code{\link[=rsmp]{rsmp()}}, \code{\link[=rsmps]{rsmps()}}
 
 Other Dictionary: 
 \code{\link{mlr_learners}},
@@ -44,7 +44,15 @@ Other Dictionary:
 \code{\link{mlr_tasks}}
 
 Other Resampling: 
-\code{\link{Resampling}}
+\code{\link{Resampling}},
+\code{\link{mlr_resamplings_bootstrap}},
+\code{\link{mlr_resamplings_custom}},
+\code{\link{mlr_resamplings_cv}},
+\code{\link{mlr_resamplings_holdout}},
+\code{\link{mlr_resamplings_insample}},
+\code{\link{mlr_resamplings_loo}},
+\code{\link{mlr_resamplings_repeated_cv}},
+\code{\link{mlr_resamplings_subsampling}}
 }
 \concept{Dictionary}
 \concept{Resampling}

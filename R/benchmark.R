@@ -3,16 +3,24 @@
 #' @description
 #' Runs a benchmark on arbitrary combinations of tasks ([Task]), learners ([Learner]), and resampling strategies ([Resampling]), possibly in parallel.
 #'
-#' @param design :: [data.frame()]\cr
+#' @param design ([data.frame()])\cr
 #'   Data frame (or [data.table::data.table()]) with three columns: "task", "learner", and "resampling".
 #'   Each row defines a resampling by providing a [Task], [Learner] and an instantiated [Resampling] strategy.
 #'   The helper function [benchmark_grid()] can assist in generating an exhaustive design (see examples) and
 #'   instantiate the [Resampling]s per [Task].
-#'
-#' @param store_models :: `logical(1)`\cr
-#'   Keep the fitted model after the test set has been predicted?
+#' @param store_models (`logical(1)`)\cr
+#'   Store the fitted model in the resulting [BenchmarkResult]?
 #'   Set to `TRUE` if you want to further analyse the models or want to
 #'   extract information like variable importance.
+#' @param store_backends (`logical(1)`)\cr
+#'   Keep the [DataBackend] of the [Task] in the [BenchmarkResult]?
+#'   Set to `TRUE` if your performance measures require a [Task],
+#'   or to analyse results more conveniently.
+#'   Set to `FALSE` to reduce the file size and memory footprint
+#'   after serialization.
+#'   The current default is `TRUE`, but this eventually will be changed
+#'   in a future release.
+#'
 #' @return [BenchmarkResult].
 #'
 #' @note
@@ -20,12 +28,13 @@
 #' If you need access to the models for later analysis, set `store_models` to `TRUE`.
 #'
 #' @template section_parallelization
+#' @template section_progress_bars
 #' @template section_logging
 #'
 #' @export
 #' @examples
 #' # benchmarking with benchmark_grid()
-#' tasks = lapply(c("iris", "sonar"), tsk)
+#' tasks = lapply(c("penguins", "sonar"), tsk)
 #' learners = lapply(c("classif.featureless", "classif.rpart"), lrn)
 #' resamplings = rsmp("cv", folds = 3)
 #'
@@ -35,10 +44,10 @@
 #' set.seed(123)
 #' bmr = benchmark(design)
 #'
-#' ## data of all resamplings
+#' ## Data of all resamplings
 #' head(as.data.table(bmr))
 #'
-#' ## aggregated performance values
+#' ## Aggregated performance values
 #' aggr = bmr$aggregate()
 #' print(aggr)
 #'
@@ -46,10 +55,10 @@
 #' rr = aggr$resample_result[[1]]
 #' as.data.table(rr$prediction())
 #'
-#' # benchmarking with a custom design:
-#' # - fit classif.featureless on iris with a 3-fold CV
+#' # Benchmarking with a custom design:
+#' # - fit classif.featureless on penguins with a 3-fold CV
 #' # - fit classif.rpart on sonar using a holdout
-#' tasks = list(tsk("iris"), tsk("sonar"))
+#' tasks = list(tsk("penguins"), tsk("sonar"))
 #' learners = list(lrn("classif.featureless"), lrn("classif.rpart"))
 #' resamplings = list(rsmp("cv", folds = 3), rsmp("holdout"))
 #'
@@ -59,24 +68,24 @@
 #'   resampling = resamplings
 #' )
 #'
-#' ## instantiate resamplings
+#' ## Instantiate resamplings
 #' design$resampling = Map(
 #'   function(task, resampling) resampling$clone()$instantiate(task),
 #'   task = design$task, resampling = design$resampling
 #' )
 #'
-#' ## run benchmark
+#' ## Run benchmark
 #' bmr = benchmark(design)
 #' print(bmr)
 #'
-#' ## get the training set of the 2nd iteration of the featureless learner on iris
+#' ## Get the training set of the 2nd iteration of the featureless learner on penguins
 #' rr = bmr$aggregate()[learner_id == "classif.featureless"]$resample_result[[1]]
 #' rr$resampling$train_set(2)
-benchmark = function(design, store_models = FALSE) {
-
+benchmark = function(design, store_models = FALSE, store_backends = TRUE) {
   assert_data_frame(design, min.rows = 1L)
   assert_names(names(design), permutation.of = c("task", "learner", "resampling"))
   design$task = list(assert_tasks(as_tasks(design$task)))
+  design$learner = list(assert_learners(as_learners(design$learner)))
   design$resampling = list(assert_resamplings(as_resamplings(design$resampling), instantiated = TRUE))
   assert_flag(store_models)
 
@@ -88,45 +97,42 @@ benchmark = function(design, store_models = FALSE) {
 
   # clone inputs
   setDT(design)
-  task = resampling = NULL
+  task = learner = resampling = NULL
   design[, "task" := list(list(task[[1L]]$clone())), by = list(hashes(task))]
+  design[, "learner" := list(list(learner[[1L]]$clone())), by = list(hashes(learner))]
   design[, "resampling" := list(list(resampling[[1L]]$clone())), by = list(hashes(resampling))]
 
   # expand the design: add rows for each resampling iteration
   grid = pmap_dtr(design, function(task, learner, resampling) {
-    # we do not need to clone the learner here because we clone it before training
-    learner = assert_learner(as_learner(learner))
+    # learner = assert_learner(as_learner(learner, clone = TRUE))
     assert_learnable(task, learner)
     data.table(
       task = list(task), learner = list(learner), resampling = list(resampling),
       iteration = seq_len(resampling$iters), uhash = UUIDgenerate()
     )
   })
+  n = nrow(grid)
 
-  lg$info("Benchmark with %i resampling iterations", nrow(grid))
+  lg$info("Benchmark with %i resampling iterations", n)
+  pb = get_progressor(n)
 
-  if (use_future()) {
-    lg$debug("Running benchmark() via future")
+  lg$debug("Running benchmark() asynchronously with %i iterations", n)
 
-    res = future.apply::future_mapply(workhorse,
-      task = grid$task, learner = grid$learner, resampling = grid$resampling,
-      iteration = grid$iteration, MoreArgs = list(store_models = store_models, lgr_threshold = lg$threshold),
-      SIMPLIFY = FALSE, USE.NAMES = FALSE,
-      future.globals = FALSE, future.scheduling = structure(TRUE, ordering = "random"),
-      future.packages = "mlr3"
-    )
-  } else {
-    lg$debug("Running benchmark() sequentially")
+  res = future.apply::future_mapply(workhorse,
+    task = grid$task, learner = grid$learner, resampling = grid$resampling,
+    iteration = grid$iteration,
+    MoreArgs = list(store_models = store_models, lgr_threshold = lg$threshold, pb = pb),
+    SIMPLIFY = FALSE, USE.NAMES = FALSE,
+    future.globals = FALSE, future.scheduling = structure(TRUE, ordering = "random"),
+    future.packages = "mlr3", future.seed = TRUE
+  )
 
-    res = mapply(workhorse,
-      task = grid$task, learner = grid$learner, resampling = grid$resampling,
-      iteration = grid$iteration, MoreArgs = list(store_models = store_models), SIMPLIFY = FALSE, USE.NAMES = FALSE
-    )
-  }
-
-  res = rbindlist(Map(reassemble, result = res, learner = grid$learner), use.names = TRUE)
-  res = insert_named(grid, res)
+  grid = insert_named(grid, list(
+    learner_state = map(res, "learner_state"),
+    prediction = map(res, "prediction")
+  ))
 
   lg$info("Finished benchmark")
-  BenchmarkResult$new(res)
+
+  BenchmarkResult$new(ResultData$new(grid, store_backends = store_backends))
 }

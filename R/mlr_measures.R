@@ -8,8 +8,10 @@
 #' Each measure has an associated help page, see `mlr_measures_[id]`.
 #'
 #' This dictionary can get populated with additional measures by add-on packages.
+#' E.g., \CRANpkg{mlr3proba} adds survival measures and \CRANpkg{mlr3cluster} adds
+#' cluster analysis measures.
 #'
-#' For a more convenient way to retrieve and construct measures, see [msr()].
+#' For a more convenient way to retrieve and construct measures, see [msr()]/[msrs()].
 #'
 #' @section Methods:
 #' See [mlr3misc::Dictionary].
@@ -23,8 +25,9 @@
 #' @family Dictionary
 #' @family Measure
 #' @seealso
-#' Example measures: [`classif.auc`][mlr_measures_classif.auc], [`time_train`][mlr_measures_time_train]
-#' Sugar function: [msr()]
+#' Sugar functions: [msr()], [msrs()]
+#'
+#' Implementation of most measures: \CRANpkg{mlr3measures}
 #' @export
 #' @examples
 #' as.data.table(mlr_measures)
@@ -38,7 +41,8 @@ mlr_measures = R6Class("DictionaryMeasure",
 #' @export
 as.data.table.DictionaryMeasure = function(x, ...) {
   setkeyv(map_dtr(x$keys(), function(key) {
-    m = x$get(key)
+    m = withCallingHandlers(x$get(key),
+      packageNotFoundWarning = function(w) invokeRestart("muffleWarning"))
     list(
       key = key,
       task_type = m$task_type,

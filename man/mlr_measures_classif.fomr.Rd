@@ -3,7 +3,6 @@
 \name{mlr_measures_classif.fomr}
 \alias{mlr_measures_classif.fomr}
 \title{False Omission Rate}
-\format{\code{\link[R6:R6Class]{R6::R6Class()}} inheriting from \link{Measure}.}
 \description{
 Binary classification measure defined as \deqn{
    \frac{\mathrm{FN}}{\mathrm{FN} + \mathrm{TN}}.
@@ -17,10 +16,10 @@ The score function calls \code{\link[mlr3measures:fomr]{mlr3measures::fomr()}} f
 If the measure is undefined for the input, \code{NaN} is returned.
 This can be customized by setting the field \code{na_value}.
 }
-\section{Construction}{
+\section{Dictionary}{
 
-This measures can be retrieved from the dictionary \link{mlr_measures}:\preformatted{mlr_measures$get("classif.fomr")
-msr("classif.fomr")
+This \link{Measure} can be instantiated via the \link[mlr3misc:Dictionary]{dictionary} \link{mlr_measures} or with the associated sugar function \code{\link[=msr]{msr()}}:\preformatted{mlr_measures$get("fomr")
+msr("fomr")
 }
 }
 
@@ -45,6 +44,7 @@ Other classification measures:
 \code{\link{mlr_measures_classif.acc}},
 \code{\link{mlr_measures_classif.auc}},
 \code{\link{mlr_measures_classif.bacc}},
+\code{\link{mlr_measures_classif.bbrier}},
 \code{\link{mlr_measures_classif.ce}},
 \code{\link{mlr_measures_classif.costs}},
 \code{\link{mlr_measures_classif.dor}},
@@ -55,9 +55,11 @@ Other classification measures:
 \code{\link{mlr_measures_classif.fpr}},
 \code{\link{mlr_measures_classif.fp}},
 \code{\link{mlr_measures_classif.logloss}},
+\code{\link{mlr_measures_classif.mbrier}},
 \code{\link{mlr_measures_classif.mcc}},
 \code{\link{mlr_measures_classif.npv}},
 \code{\link{mlr_measures_classif.ppv}},
+\code{\link{mlr_measures_classif.prauc}},
 \code{\link{mlr_measures_classif.precision}},
 \code{\link{mlr_measures_classif.recall}},
 \code{\link{mlr_measures_classif.sensitivity}},
@@ -69,6 +71,7 @@ Other classification measures:
 
 Other binary classification measures: 
 \code{\link{mlr_measures_classif.auc}},
+\code{\link{mlr_measures_classif.bbrier}},
 \code{\link{mlr_measures_classif.dor}},
 \code{\link{mlr_measures_classif.fbeta}},
 \code{\link{mlr_measures_classif.fdr}},
@@ -79,6 +82,7 @@ Other binary classification measures:
 \code{\link{mlr_measures_classif.mcc}},
 \code{\link{mlr_measures_classif.npv}},
 \code{\link{mlr_measures_classif.ppv}},
+\code{\link{mlr_measures_classif.prauc}},
 \code{\link{mlr_measures_classif.precision}},
 \code{\link{mlr_measures_classif.recall}},
 \code{\link{mlr_measures_classif.sensitivity}},

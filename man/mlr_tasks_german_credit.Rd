@@ -3,10 +3,14 @@
 \name{mlr_tasks_german_credit}
 \alias{mlr_tasks_german_credit}
 \title{German Credit Classification Task}
-\format{\link[R6:R6Class]{R6::R6Class} inheriting from \link{TaskClassif}.}
+\format{
+\link[R6:R6Class]{R6::R6Class} inheriting from \link{TaskClassif}.
+}
 \source{
 Data set originally published on \href{https://archive.ics.uci.edu/ml/datasets/statlog+(german+credit+data)}{UCI}.
-This is the preprocessed version taken from package \CRANpkg{evtree}.
+This is the preprocessed version taken from package \CRANpkg{rchallenge} with
+factors instead of dummy variables, and corrected as proposed by Ulrike
+Grömping.
 
 Donor:
 Professor Dr. Hans Hofmann\cr
@@ -29,6 +33,18 @@ tsk("german_credit")
 }
 }
 
+\section{Meta Information}{
+
+\itemize{
+\item Task type: \dQuote{classif}
+\item Dimensions: 1000x21
+\item Properties: \dQuote{twoclass}
+\item Has Missings: \code{FALSE}
+\item Target: \dQuote{credit_risk}
+\item Features: \dQuote{age}, \dQuote{amount}, \dQuote{credit_history}, \dQuote{duration}, \dQuote{employment_duration}, \dQuote{foreign_worker}, \dQuote{housing}, \dQuote{installment_rate}, \dQuote{job}, \dQuote{number_credits}, \dQuote{other_debtors}, \dQuote{other_installment_plans}, \dQuote{people_liable}, \dQuote{personal_status_sex}, \dQuote{present_residence}, \dQuote{property}, \dQuote{purpose}, \dQuote{savings}, \dQuote{status}, \dQuote{telephone}
+}
+}
+
 \examples{
 task = tsk("german_credit")
 costs = matrix(c(0, 1, 5, 0), nrow = 2)
@@ -36,8 +52,33 @@ dimnames(costs) = list(predicted = task$class_names, truth = task$class_names)
 measure = msr("classif.costs", id = "german_credit_costs", costs = costs)
 print(measure)
 }
+\references{
+Grömping U (2019).
+\dQuote{South German Credit Data: Correcting a Widely Used Data Set.}
+Reports in Mathematics, Physics and Chemistry 4, Department II, Beuth University of Applied Sciences Berlin.
+\url{http://www1.beuth-hochschule.de/FB_II/reports/Report-2019-004.pdf}.
+}
 \seealso{
 \link[mlr3misc:Dictionary]{Dictionary} of \link[=Task]{Tasks}: \link{mlr_tasks}
 
 \code{as.data.table(mlr_tasks)} for a complete table of all (also dynamically created) \link[=Task]{Tasks}.
+
+Other Task: 
+\code{\link{TaskClassif}},
+\code{\link{TaskRegr}},
+\code{\link{TaskSupervised}},
+\code{\link{TaskUnsupervised}},
+\code{\link{Task}},
+\code{\link{mlr_tasks_boston_housing}},
+\code{\link{mlr_tasks_breast_cancer}},
+\code{\link{mlr_tasks_iris}},
+\code{\link{mlr_tasks_mtcars}},
+\code{\link{mlr_tasks_penguins}},
+\code{\link{mlr_tasks_pima}},
+\code{\link{mlr_tasks_sonar}},
+\code{\link{mlr_tasks_spam}},
+\code{\link{mlr_tasks_wine}},
+\code{\link{mlr_tasks_zoo}},
+\code{\link{mlr_tasks}}
 }
+\concept{Task}

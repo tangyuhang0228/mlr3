@@ -16,8 +16,50 @@ Efficient, object-oriented programming on the
     the core computational operations, add-on packages provide additional
     functionality.
 }
+\section{Learn mlr3}{
+
+\itemize{
+\item Book on mlr3: \url{https://mlr3book.mlr-org.com}
+\item Use cases and examples gallery: \url{https://mlr3gallery.mlr-org.com}
+\item Cheat Sheets: \url{https://cheatsheets.mlr-org.com}
+}
+}
+
+\section{mlr3 extensions}{
+
+\itemize{
+\item Preprocessing and machine learning pipelines: \CRANpkg{mlr3pipelines}
+\item Analysis of benchmark experiments: \CRANpkg{mlr3benchmark}
+\item More classification and regression tasks: \CRANpkg{mlr3data}
+\item Connector to \href{https://www.openml.org}{OpenML}: \CRANpkg{mlr3oml}
+\item Solid selection of good classification and regression learners: \CRANpkg{mlr3learners}
+\item Even more learners: \url{https://github.com/mlr-org/mlr3extralearners}
+\item Tuning of hyperparameters: \CRANpkg{mlr3tuning}
+\item Hyperband tuner: \CRANpkg{mlr3hyperband}
+\item Visualizations for many \pkg{mlr3} objects: \CRANpkg{mlr3viz}
+\item Survival analysis and probabilistic regression: \CRANpkg{mlr3proba}
+\item Cluster analysis: \CRANpkg{mlr3cluster}
+\item Feature selection filters: \CRANpkg{mlr3filters}
+\item Feature selection wrappers: \CRANpkg{mlr3fselect}
+\item Interface to real (out-of-memory) data bases: \CRANpkg{mlr3db}
+\item Performance measures as plain functions: \CRANpkg{mlr3measures}
+}
+}
+
+\section{Suggested packages}{
+
+\itemize{
+\item Parallelization framework: \CRANpkg{future}
+\item Progress bars: \CRANpkg{progressr}
+\item Encapsulated evaluation: \CRANpkg{evaluate}, \CRANpkg{callr} (external process)
+}
+}
+
 \references{
-\cite{mlr3}{pkg::citation}
+Lang M, Binder M, Richter J, Schratz P, Pfisterer F, Coors S, Au Q, Casalicchio G, Kotthoff L, Bischl B (2019).
+\dQuote{mlr3: A modern object-oriented machine learning framework in R.}
+\emph{Journal of Open Source Software}.
+\doi{10.21105/joss.01903}, \url{https://joss.theoj.org/papers/10.21105/joss.01903}.
 }
 \seealso{
 Useful links:
@@ -44,6 +86,7 @@ Other contributors:
   \item Giuseppe Casalicchio \email{giuseppe.casalicchio@stat.uni-muenchen.de} (\href{https://orcid.org/0000-0001-5324-5966}{ORCID}) [contributor]
   \item Stefan Coors \email{mail@stefancoors.de} (\href{https://orcid.org/0000-0002-7465-2146}{ORCID}) [contributor]
   \item Quay Au \email{quayau@gmail.com} (\href{https://orcid.org/0000-0002-5252-8902}{ORCID}) [contributor]
+  \item Marc Becker \email{marcbecker@posteo.de} (\href{https://orcid.org/0000-0002-8115-0400}{ORCID}) [contributor]
 }
 
 }

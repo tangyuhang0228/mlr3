@@ -16,26 +16,26 @@
 #' * `msr()` for a [Measure] from [mlr_measures].
 #' * `msrs()` for a list of [Measure]s from [mlr_measures].
 #'
-#' @param .key :: `character(1)`\cr
-#'   Key passed to the respective [mlr3misc::Dictionary] to retrieve the object.
-#' @param .keys :: `character()`\cr
-#'   Keys passed to the respective [mlr3misc::Dictionary] to retrieve multiple objects.
-#' @param ... :: named `list()`\cr
+#' @param .key (`character(1)`)\cr
+#'   Key passed to the respective [dictionary][mlr3misc::Dictionary] to retrieve the object.
+#' @param .keys (`character()`)\cr
+#'   Keys passed to the respective [dictionary][mlr3misc::Dictionary] to retrieve multiple objects.
+#' @param ... (named `list()`)\cr
 #'   Named arguments passed to the constructor, to be set as parameters in the [paradox::ParamSet], or to be set as public field.
 #'   See [mlr3misc::dictionary_sugar_get()] for more details.
 #'
 #' @return [R6::R6Class] object of the respective type,
 #'   or a list of [R6::R6Class] objects for the plural versions.
 #' @examples
-#' # iris task with new id
-#' tsk("iris", id = "iris2")
+#' # penguins task with new id
+#' tsk("penguins", id = "penguins2")
 #'
 #' # classification tree with different hyperparameters
 #' # and predict type set to predict probabilities
 #' lrn("classif.rpart", cp = 0.1, predict_type = "prob")
 #'
 #' # multiple learners with predict type 'prob'
-#' lapply(c("classif.featureless", "classif.rpart"), lrn, predict_type = "prob")
+#' lrns(c("classif.featureless", "classif.rpart"), predict_type = "prob")
 NULL
 
 #' @rdname mlr_sugar

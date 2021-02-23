@@ -1,119 +1,29 @@
-#' @title Container for Results of `benchmark()`
+#' @title Container for Benchmarking Results
 #'
-#' @usage NULL
-#' @format [R6::R6Class] object.
 #' @include mlr_reflections.R
 #'
 #' @description
 #' This is the result container object returned by [benchmark()].
-#' A [BenchmarkResult] consists of the data row-binded data of multiple [ResampleResult]s,
-#' which can easily be re-constructed.
+#' A [BenchmarkResult] consists of the data row-binded data of multiple
+#' [ResampleResult]s, which can easily be re-constructed.
 #'
-#' Note that all stored objects are accessed by reference.
-#' Do not modify any object without cloning it first.
+#' [BenchmarkResult]s can be visualized via \CRANpkg{mlr3viz}'s `autoplot()` function.
 #'
-#' @section Construction:
-#' ```
-#' bmr = BenchmarkResult$new(data = data.table())
-#' ```
+#' For statistical analysis of benchmark results and more advanced plots, see \CRANpkg{mlr3benchmark}.
 #'
-#' * `data` :: [data.table::data.table()]\cr
-#'   Table with data for one resampling iteration per row:
-#'   [Task], [Learner], [Resampling], iteration (`integer(1)`), [Prediction], and the unique
-#'   hash `uhash` (`character(1)`) of the corresponding [ResampleResult].
-#'   Additional columns are kept in the resulting object.
+#' @note
+#' All stored objects are accessed by reference.
+#' Do not modify any extracted object without cloning it first.
 #'
-#' @section Fields:
-#' * `data` :: [data.table::data.table()]\cr
-#'   Internal data storage with one row per resampling iteration.
-#'   Can be joined with `$rr_data` by joining on column `"hash"`.
-#'   We discourage users to directly work with this table.
-#'
-#'   Package develops on the other hand may opt to add additional columns here.
-#'   These columns are preserved in all mutators.
-#'
-#' * `rr_data` :: [data.table::data.table()]\cr
-#'   Internal data storage with one row per [ResampleResult].
-#'   Can be joined with `$data` by joining on column `"hash"`.
-#'   Not used in `mlr3` directly, but can be exploited by add-on packages.
-#'
-#'   Package develops may opt to add additional columns here.
-#'   These columns are preserved in all mutators.
-#'
-#' * `task_type` :: `character(1)`\cr
-#'   Task type of objects in the `BenchmarkResult`.
-#'   All stored objects ([Task], [Learner], [Prediction]) in a single `BenchmarkResult` are required to have the same task type, e.g., `"classif"` or `"regr"`.
-#'
-#' * `tasks` :: [data.table::data.table()]\cr
-#'   Table of used tasks with three columns:
-#'   `"task_hash"` (`character(1)`), `"task_id"` (`character(1)`) and `"task"` ([Task]).
-#'
-#' * `learners` :: [data.table::data.table()]\cr
-#'   Table of used learners with three columns:
-#'   `"learner_hash"` (`character(1)`), `"learner_id"` (`character(1)`) and `"learner"` ([Learner]).
-#'   Note that it is not feasible to access learnt models via this getter, as the training task would be ambiguous.
-#'   Instead, select a row from the table returned by `$score()`.
-#'
-#' * `resamplings` :: [data.table::data.table()]\cr
-#'   Table of used resamplings with three columns:
-#'   `"resampling_hash"` (`character(1)`), `"resampling_id"` (`character(1)`) and `"resampling"` ([Resampling]).
-#'
-#' * `n_resample_results` :: `integer(1)`\cr
-#'   Returns the number of stored [ResampleResult]s.
-#'
-#' * `uhashes` :: `character()`\cr
-#'   Vector of unique hashes of all included [ResampleResult]s.
-#'
-#' @section Methods:
-#' * `aggregate(measures = NULL, ids = TRUE, uhashes = FALSE, params = FALSE, conditions = FALSE)`\cr
-#'   (list of [Measure], `logical(1)`, `logical(1)`, `logical(1)`, `logical(1)`) -> [data.table::data.table()]\cr
-#'   Returns a result table where resampling iterations are combined into [ResampleResult]s.
-#'   A column with the aggregated performance score is added for each [Measure], named with the id of the respective measure.
-#'
-#'   For convenience, the following parameters can be set to extract more information from the returned [ResampleResult]:
-#'     * `uhashes` :: `logical(1)`\cr
-#'       Adds the uhash values of the [ResampleResult] as extra character column `"uhash"`.
-#'     * `ids` :: `logical(1)`\cr
-#'       Adds object ids (`"task_id"`, `"learner_id"`, `"resampling_id"`) as extra character columns.
-#'     * `params` :: `logical(1)`\cr
-#'       Adds the hyperparameter values as extra list column `"params"`.
-#'       You can unnest them with [mlr3misc::unnest()].
-#'     * `conditions` :: `logical(1)`\cr
-#'       Adds the number of resampling iterations with at least one warning as extra integer column `"warnings"`, and
-#'       the number of resampling iterations with errors as extra integer column `"errors"`.
-#'
-#' * `score(measures = NULL, ids = TRUE)`\cr
-#'   (list of [Measure], `logical(1)`) -> [data.table::data.table()]\cr
-#'   Returns a table with one row for each resampling iteration, including all involved objects:
-#'   [Task], [Learner], [Resampling], iteration number (`integer(1)`), and [Prediction].
-#'   If `ids` is set to `TRUE`, character column of extracted ids are added to the table for convenient filtering: `"task_id"`, `"learner_id"`, and `"resampling_id"`.
-#'   Additionally calculates the provided performance measures and binds the performance as extra columns.
-#'   These columns are named using the id of the respective [Measure].
-#'
-#' * `resample_result(i = NULL, uhash = NULL)`\cr
-#'   (`integer(1)`, `character(1)`) -> [ResampleResult]\cr
-#'   Retrieve the i-th [ResampleResult], by position or by unique hash `uhash`.
-#'   `i` and `uhash` are mutually exclusive.
-#'
-#' * `combine(bmr)`\cr
-#'   ([BenchmarkResult] | `NULL`) -> `self`\cr
-#'   Fuses a second [BenchmarkResult] into itself, mutating the [BenchmarkResult] in-place.
-#'   If `bmr` is `NULL`, simply returns `self`.
-#'
-#' * `filter(task_ids = NULL, learner_ids = NULL, resampling_ids = NULL)`\cr
-#'   (`character()`, `character()`, `character()`) -> `self`\cr
-#'   Subsets the benchmark result.
-#'   If `task_ids` is not `NULL`, keeps all tasks with provided task ids while discards all others.
-#'   Same procedure for `learner_ids` and `resampling_ids`.
-#'
-#' * `help()`\cr
-#'   () -> `NULL`\cr
-#'   Opens the help page for this object.
+#' @template param_measures
 #'
 #' @section S3 Methods:
-#' * `as.data.table(bmr)`\cr
+#' * `as.data.table(rr, ..., reassemble_learners = TRUE, convert_predictions = TRUE, predict_sets = "test")`\cr
 #'   [BenchmarkResult] -> [data.table::data.table()]\cr
-#'   Returns a copy of the internal data.
+#'   Returns a tabular view of the internal data.
+#' * `c(...)`\cr
+#'   ([BenchmarkResult], ...) -> [BenchmarkResult]\cr
+#'   Combines multiple objects convertible to [BenchmarkResult] into a new [BenchmarkResult].
 #'
 #' @export
 #' @examples
@@ -136,7 +46,7 @@
 #' bmr$tasks
 #' bmr$learners
 #'
-#' # first 5 individual resamplings
+#' # first 5 resampling iterations
 #' head(as.data.table(bmr, measures = c("classif.acc", "classif.auc")), 5)
 #'
 #' # aggregate results
@@ -151,207 +61,411 @@
 #'
 #' # access the confusion matrix of the first resampling iteration
 #' rr$predictions()[[1]]$confusion
+#'
+#' # reduce to subset with task id "sonar"
+#' bmr$filter(task_ids = "sonar")
+#' print(bmr)
 BenchmarkResult = R6Class("BenchmarkResult",
   public = list(
+    #' @field data (`ResultData`)\cr
+    #' Internal data storage object of type `ResultData`.
+    #' We discourage users to directly work with this field.
+    #' Use `as.table.table(BenchmarkResult)` instead.
     data = NULL,
-    rr_data = NULL,
 
-    initialize = function(data = data.table()) {
-      assert_data_table(data)
-      slots = c("uhash", mlr_reflections$rr_names)
-      if (any(dim(data) == 0L)) {
-        data = data.table(uhash = character(), task = list(), learner = list(), resampling = list(),
-          iteration = integer(), prediction = list())
+    #' @description
+    #' Creates a new instance of this [R6][R6::R6Class] class.
+    #'
+    #' @param data (`ResultData`)\cr
+    #'   An object of type `ResultData`, either extracted from another [ResampleResult], another
+    #'   [BenchmarkResult], or manually constructed with [as_result_data()].
+    initialize = function(data = NULL) {
+      if (is.null(data)) {
+        self$data = ResultData$new()
       } else {
-        assert_names(names(data), must.include = slots)
+        self$data = assert_class(data, "ResultData")
       }
-
-      self$data = setcolorder(data, slots)
-      self$rr_data = data[, list(uhash = unique(uhash))]
     },
 
+    #' @description
+    #' Opens the help page for this object.
     help = function() {
       open_help("mlr3::BenchmarkResult")
     },
 
+    #' @description
+    #' Helper for print outputs.
     format = function() {
       sprintf("<%s>", class(self)[1L])
     },
 
+    #' @description
+    #' Printer.
     print = function() {
-      tab = remove_named(self$aggregate(measures = list(), conditions = TRUE), c("uhash", "resample_result"))
+      tab = self$aggregate(measures = list(), conditions = TRUE)
       catf("%s of %i rows with %i resampling runs",
-        format(self), nrow(self$data), nrow(tab))
+        format(self), self$data$iterations(), nrow(tab))
       if (nrow(tab)) {
+        tab = remove_named(tab, c("uhash", "resample_result"))
         print(tab, class = FALSE, row.names = FALSE, print.keys = FALSE, digits = 3)
       }
     },
 
+    #' @description
+    #' Fuses a second [BenchmarkResult] into itself, mutating the [BenchmarkResult] in-place.
+    #' If the second [BenchmarkResult] `bmr` is `NULL`, simply returns `self`.
+    #' Note that you can alternatively use the combine function [c()] which calls this method internally.
+    #'
+    #' @param bmr ([BenchmarkResult])\cr
+    #'   A second [BenchmarkResult] object.
+    #'
+    #' @return
+    #' Returns the object itself, but modified **by reference**.
+    #' You need to explicitly `$clone()` the object beforehand if you want to keep
+    #' the object in its previous state.
     combine = function(bmr) {
       if (!is.null(bmr)) {
         assert_benchmark_result(bmr)
-        if (nrow(self$data) && self$task_type != bmr$task_type) {
+        if (self$data$iterations() && self$task_type != bmr$task_type) {
           stopf("BenchmarkResult is of task type '%s', but must be '%s'", bmr$task_type, self$task_type)
         }
-        self$data = rbindlist(list(self$data, bmr$data), fill = TRUE, use.names = TRUE)
-        self$rr_data = rbindlist(list(self$rr_data, bmr$rr_data), fill = TRUE, use.names = TRUE)
+
+        self$data$combine(bmr$data)
       }
 
       invisible(self)
     },
 
-    score = function(measures = NULL, ids = TRUE) {
+
+    #' @description
+    #' Returns a table with one row for each resampling iteration, including
+    #' all involved objects: [Task], [Learner], [Resampling], iteration number
+    #' (`integer(1)`), and [Prediction]. If `ids` is set to `TRUE`, character
+    #' column of extracted ids are added to the table for convenient
+    #' filtering: `"task_id"`, `"learner_id"`, and `"resampling_id"`.
+    #'
+    #' Additionally calculates the provided performance measures and binds the
+    #' performance scores as extra columns. These columns are named using the id of
+    #' the respective [Measure].
+    #'
+    #' @param ids (`logical(1)`)\cr
+    #'   Adds object ids (`"task_id"`, `"learner_id"`, `"resampling_id"`) as
+    #'   extra character columns to the returned table.
+    #'
+    #' @param conditions (`logical(1)`)\cr
+    #'   Adds condition messages (`"warnings"`, `"errors"`) as extra
+    #'   list columns of character vectors to the returned table
+    #'
+    #' @template param_predict_sets
+    #'
+    #' @return [data.table::data.table()].
+    score = function(measures = NULL, ids = TRUE, conditions = FALSE, predict_sets = "test") {
       measures = assert_measures(as_measures(measures, task_type = self$task_type))
       assert_flag(ids)
-      tab = copy(self$data)
+      assert_flag(conditions)
 
-      for (m in measures) {
-        set(tab, j = m$id, value = measure_score_data(m, self$data))
-      }
-
-      # replace hash with nr
-      tab[, ("nr") := .GRP, by = "uhash"][, ("uhash") := NULL]
+      tab = score_measures(self, measures, view = NULL)
+      tab = merge(self$data$data$uhashes, tab, by = "uhash", sort = FALSE)
+      tab[, "nr" := .GRP, by = "uhash"]
 
       if (ids) {
-        tab[, c("task_id", "learner_id", "resampling_id") := list(ids(task), ids(learner), ids(resampling))]
-        setcolorder(tab, c("nr", "task", "task_id", "learner", "learner_id", "resampling", "resampling_id", "iteration", "prediction"))
-      } else {
-        setcolorder(tab, "nr")
+        set(tab, j = "task_id", value = ids(tab$task))
+        set(tab, j = "learner_id", value = ids(tab$learner))
+        set(tab, j = "resampling_id", value = ids(tab$resampling))
       }
 
-      tab[]
+      if (conditions) {
+        set(tab, j = "warnings", value = map(tab$learner, "warnings"))
+        set(tab, j = "errors", value = map(tab$learner, "errors"))
+      }
+
+      set(tab, j = "prediction", value = as_predictions(tab$prediction, predict_sets))
+
+      cns = c("uhash", "nr", "task", "task_id", "learner", "learner_id", "resampling", "resampling_id",
+        "iteration", "prediction", "warnings", "errors", ids(measures))
+      cns = intersect(cns, names(tab))
+      tab[, cns, with = FALSE]
     },
 
+    #' @description
+    #' Returns a result table where resampling iterations are combined into
+    #' [ResampleResult]s. A column with the aggregated performance score is
+    #' added for each [Measure], named with the id of the respective measure.
+    #'
+    #' For convenience, different flags can be set to extract more
+    #' information from the returned [ResampleResult]:
+    #'
+    #' @param uhashes (`logical(1)`)\cr
+    #'   Adds the uhash values of the [ResampleResult] as extra character
+    #'   column `"uhash"`.
+    #'
+    #' @param ids (`logical(1)`)\cr
+    #'   Adds object ids (`"task_id"`, `"learner_id"`, `"resampling_id"`) as
+    #'   extra character columns for convenient subsetting.
+    #'
+    #' @param params (`logical(1)`)\cr
+    #'   Adds the hyperparameter values as extra list column `"params"`. You
+    #'   can unnest them with [mlr3misc::unnest()].
+    #'
+    #' @param conditions (`logical(1)`)\cr
+    #'   Adds the number of resampling iterations with at least one warning as
+    #'   extra integer column `"warnings"`, and the number of resampling
+    #'   iterations with errors as extra integer column `"errors"`.
+    #'
+    #' @return [data.table::data.table()].
     aggregate = function(measures = NULL, ids = TRUE, uhashes = FALSE, params = FALSE, conditions = FALSE) {
-      res = self$data[, list(
+      measures = assert_measures(as_measures(measures, task_type = self$task_type))
+      assert_flag(ids)
+      assert_flag(uhashes)
+      assert_flag(params)
+      assert_flag(conditions)
+
+      create_rr = function(view) {
+        if (length(view)) ResampleResult$new(self$data, view = copy(view)) else list()
+      }
+
+      rdata = self$data$data
+      tab = rdata$fact[rdata$uhashes, list(
         nr = .GRP,
         iters = .N,
-        resample_result = list(if (.N > 0L) ResampleResult$new(copy(.SD), uhash[1L]) else NULL)
-      ), by = uhash]
+        task_hash = .SD$task_hash[1L],
+        learner_hash = .SD$learner_hash[1L],
+        learner_phash = .SD$learner_phash[1L],
+        resampling_hash = .SD$resampling_hash[1L],
+        resample_result = list(create_rr(.BY[[1L]])),
+        warnings = if (conditions) sum(map_int(.SD$learner_state, function(s) sum(s$log$class == "warning"))) else NA_integer_,
+        errors = if (conditions) sum(map_int(.SD$learner_state, function(s) sum(s$log$class == "error"))) else NA_integer_
+      ), by = "uhash", on = "uhash", nomatch = NULL]
 
-      if (assert_flag(ids)) {
-        res[, "task_id" := map_chr(resample_result, function(x) x$task$id)]
-        res[, "learner_id" := map_chr(resample_result, function(x) x$learners[[1L]]$id)]
-        res[, "resampling_id" := map_chr(resample_result, function(x) x$resampling$id)]
+      if (ids) {
+        tab = merge(tab, rdata$tasks[, list(task_hash = .SD$task_hash, task_id = ids(.SD$task))],
+          by = "task_hash", sort = FALSE)
+        tab = merge(tab, rdata$learners[, list(learner_phash = .SD$learner_phash, learner_id = ids(.SD$learner))],
+          by = "learner_phash", sort = FALSE)
+        tab = merge(tab, rdata$resamplings[, list(resampling_hash = .SD$resampling_hash, resampling_id = ids(.SD$resampling))],
+          by = "resampling_hash", sort = FALSE)
       }
 
-      # move iters to last column
-      setcolorder(res, setdiff(names(res), "iters"))
-
-      if (assert_flag(params)) {
-        res[, "params" := list(map(resample_result, function(x) x$learners[[1L]]$param_set$values))]
+      if (!uhashes) {
+        set(tab, j = "uhash", value = NULL)
       }
 
-      if (assert_flag(conditions)) {
-        res[, "warnings" := map_int(resample_result, function(rr) uniqueN(rr$warnings, by = "iteration"))]
-        res[, "errors" := map_int(resample_result, function(rr) uniqueN(rr$errors, by = "iteration"))]
+      if (params) {
+        tab = merge(tab, rdata$learner_components, by = "learner_hash", sort = FALSE)
+        setnames(tab, "learner_param_vals", "params")
       }
 
-      if (nrow(res)) {
-        res = rcbind(res, map_dtr(res$resample_result, function(x) as.list(x$aggregate(measures)), .fill = TRUE))
+      if (!conditions) {
+        tab = remove_named(tab, c("warnings", "errors"))
       }
 
-      if (ncol(self$rr_data) >= 2L) {
-        res = merge(res, self$rr_data, on = "uhash", all.x = TRUE, all.y = FALSE, sort = FALSE)
-      }
-
-      if (!assert_flag(uhashes)) {
-        res[, ("uhash") := NULL]
+      if (nrow(tab) > 0L) {
+        scores = map_dtr(tab$resample_result, function(rr) as.list(rr$aggregate(measures)))
       } else {
-        setcolorder(res, c("nr", "uhash"))
+        scores = setDT(named_list(ids(measures), double()))
       }
+      tab = insert_named(tab, scores)
 
-      return(res[])
+      cns = c("uhash", "nr", "resample_result", "task_id", "learner_id", "resampling_id", "iters",
+          "warnings", "errors", "params", ids(measures))
+      cns = intersect(cns, names(tab))
+      tab[, cns, with = FALSE]
     },
 
-    filter = function(task_ids = NULL, learner_ids = NULL, resampling_ids = NULL) {
+    #' @description
+    #' Subsets the benchmark result. If `task_ids` is not `NULL`, keeps all
+    #' tasks with provided task ids and discards all others tasks.
+    #' Same procedure for `learner_ids` and `resampling_ids`.
+    #'
+    #' @param task_ids (`character()`)\cr
+    #'   Ids of [Task]s to keep.
+    #' @param task_hashes (`character()`)\cr
+    #'   Hashes of [Task]s to keep.
+    #' @param learner_ids (`character()`)\cr
+    #'   Ids of [Learner]s to keep.
+    #' @param learner_hashes (`character()`)\cr
+    #'   Hashes of [Learner]s to keep.
+    #' @param resampling_ids (`character()`)\cr
+    #'   Ids of [Resampling]s to keep.
+    #' @param resampling_hashes (`character()`)\cr
+    #'   Hashes of [Resampling]s to keep.
+    #'
+    #' @return
+    #' Returns the object itself, but modified **by reference**.
+    #' You need to explicitly `$clone()` the object beforehand if you want to keeps
+    #' the object in its previous state.
+    filter = function(task_ids = NULL, task_hashes = NULL, learner_ids = NULL, learner_hashes = NULL,
+      resampling_ids = NULL, resampling_hashes = NULL) {
+      learner_phashes = NULL
+
+      filter_if_not_null = function(column, hashes) {
+        if (is.null(hashes))
+          fact
+        else
+          fact[unique(hashes), on = column, nomatch = NULL]
+      }
+
+
       if (!is.null(task_ids)) {
-        assert_character(task_ids, any.missing = FALSE)
-        self$data = self$data[ids(task) %in% task_ids]
+        task = task_hash = NULL
+        task_hashes = union(task_hashes, self$data$data$tasks[ids(task) %in% task_ids, task_hash])
       }
 
       if (!is.null(learner_ids)) {
-        assert_character(learner_ids, any.missing = FALSE)
-        self$data = self$data[ids(learner) %in% learner_ids]
+        learner = learner_phash = NULL
+        learner_phashes = self$data$data$learners[ids(learner) %in% learner_ids, learner_phash]
       }
 
       if (!is.null(resampling_ids)) {
-        assert_character(resampling_ids, any.missing = FALSE)
-        self$data = self$data[ids(resampling) %in% resampling_ids]
+        resampling = resampling_hash = NULL
+        resampling_hashes = union(resampling_hashes, self$data$data$resamplings[ids(resampling) %in% resampling_ids, resampling_hash])
       }
+
+      fact = self$data$data$fact
+      fact = filter_if_not_null("task_hash", task_hashes)
+      fact = filter_if_not_null("learner_hash", learner_hashes)
+      fact = filter_if_not_null("learner_phash", learner_phashes)
+      fact = filter_if_not_null("resampling_hash", resampling_hashes)
+
+      self$data$data$fact = fact
+      self$data$sweep()
 
       invisible(self)
     },
 
+    #' @description
+    #' Retrieve the i-th [ResampleResult], by position or by unique hash `uhash`.
+    #' `i` and `uhash` are mutually exclusive.
+    #'
+    #' @param i (`integer(1)`)\cr
+    #'   The iteration value to filter for.
+    #'
+    #' @param uhash (`logical(1)`)\cr
+    #'   The `ushash` value to filter for.
+    #'
+    #' @return [ResampleResult].
     resample_result = function(i = NULL, uhash = NULL) {
       if (!xor(is.null(i), is.null(uhash))) {
         stopf("Either `i` or `uhash` must be provided")
       }
 
-      uhashes = self$uhashes
+      uhashes = self$data$uhashes()
       if (is.null(i)) {
         needle = assert_choice(uhash, uhashes)
       } else {
         i = assert_int(i, lower = 1L, upper = length(uhashes), coerce = TRUE)
         needle = uhashes[i]
       }
-      ResampleResult$new(self$data[uhash == needle])
+
+      ResampleResult$new(self$data, view = needle)
     }
   ),
 
   active = list(
-    task_type = function() {
-      if (nrow(self$data) == 0L)
-        return(NULL)
-      self$data$task[[1L]]$task_type
+    #' @field task_type (`character(1)`)\cr
+    #' Task type of objects in the `BenchmarkResult`.
+    #' All stored objects ([Task], [Learner], [Prediction]) in a single `BenchmarkResult` are
+    #' required to have the same task type, e.g., `"classif"` or `"regr"`.
+    #' This is `NA` for empty [BenchmarkResult]s.
+    task_type = function(rhs) {
+      assert_ro_binding(rhs)
+      self$data$task_type
     },
 
-    tasks = function() {
-      unique(self$data[, list(task_hash = hashes(task), task_id = ids(task), task = task)], by = "task_hash")
+    #' @field tasks ([data.table::data.table()])\cr
+    #' Table of included [Task]s with three columns:
+    #'
+    #' * `"task_hash"` (`character(1)`),
+    #' * `"task_id"` (`character(1)`), and
+    #' * `"task"` ([Task]).
+    tasks = function(rhs) {
+      assert_ro_binding(rhs)
+
+      tab = self$data$tasks()
+      set(tab, j = "task_id", value = ids(tab$task))
+      setcolorder(tab, c("task_hash", "task_id", "task"))[]
     },
 
-    learners = function() {
-      tab = unique(self$data[, list(learner_hash = hashes(learner), learner_id = ids(learner), learner = learner)], by = "learner_hash")
-      tab[, learner := lapply(learner, function(x) x$clone(deep = TRUE)$reset())][]
+    #' @field learners ([data.table::data.table()])\cr
+    #' Table of included [Learner]s with three columns:
+    #'
+    #' * `"learner_hash"` (`character(1)`),
+    #' * `"learner_id"` (`character(1)`), and
+    #' * `"learner"` ([Learner]).
+    #'
+    #' Note that it is not feasible to access learned models via this field, as the training task would be ambiguous.
+    #' For this reason the returned learner are reseted before they are returned.
+    #' Instead, select a row from the table returned by `$score()`.
+    learners = function(rhs) {
+      assert_ro_binding(rhs)
+
+      tab = self$data$learners(states = FALSE)
+      set(tab, j = "learner_id", value = ids(tab$learner))
+      setcolorder(tab, c("learner_hash", "learner_id", "learner"))[]
     },
 
-    resamplings = function() {
-      unique(self$data[, list(resampling_hash = hashes(resampling), resampling_id = ids(resampling), resampling = resampling)], by = "resampling_hash")
+    #' @field resamplings ([data.table::data.table()])\cr
+    #' Table of included [Resampling]s with three columns:
+    #'
+    #' * `"resampling_hash"` (`character(1)`),
+    #' * `"resampling_id"` (`character(1)`), and
+    #' * `"resampling"` ([Resampling]).
+    resamplings = function(rhs) {
+      assert_ro_binding(rhs)
+
+      tab = self$data$resamplings()
+      set(tab, j = "resampling_id", value = ids(tab$resampling))
+      setcolorder(tab, c("resampling_hash", "resampling_id", "resampling"))[]
     },
 
-    n_resample_results = function() {
-      nrow(self$rr_data)
+    #' @field resample_results ([data.table::data.table()])\cr
+    #' Returns a table with three columns:
+    #' * `uhash` (`character()`).
+    #' * `resample_result` ([ResampleResult]).
+    resample_results = function(rhs) {
+      assert_ro_binding(rhs)
+      rdata = self$data$data
+
+      create_rr = function(view) {
+        if (length(view)) ResampleResult$new(self$data, view = copy(view)) else list()
+      }
+      tab = rdata$fact[rdata$uhashes, list(
+        nr = .GRP,
+        resample_result = list(create_rr(.BY[[1L]]))
+      ), by = "uhash"]
     },
 
-    uhashes = function() {
-      self$rr_data$uhash
+    #' @field n_resample_results (`integer(1)`)\cr
+    #' Returns the total number of stored [ResampleResult]s.
+    n_resample_results = function(rhs) {
+      assert_ro_binding(rhs)
+      length(self$data$uhashes())
+    },
+
+    #' @field uhashes (`character()`)\cr
+    #' Set of (unique) hashes of all included [ResampleResult]s.
+    uhashes = function(rhs) {
+      assert_ro_binding(rhs)
+      self$data$uhashes()
     }
   ),
 
   private = list(
     deep_clone = function(name, value) {
-      if (name == "data") copy(value) else value
+      if (name == "data") value$clone(deep = TRUE) else value
     }
   )
 )
 
 #' @export
-as.data.table.BenchmarkResult = function(x, ...) {
-  copy(x$data)
+as.data.table.BenchmarkResult = function(x, ..., hashes = FALSE, predict_sets = "test") { # nolint
+  tab = x$data$as_data_table(view = NULL, predict_sets = predict_sets)
+  tab[, c("uhash", "task", "learner", "resampling", "iteration", "prediction"), with = FALSE]
 }
 
-#' @title Convert to BenchmarkResult
-#'
-#' @description
-#' Simple S3 method to convert objects to a [BenchmarkResult].
-#'
-#' @param x :: `any`\cr
-#'  Object to dispatch on, e.g. a [ResampleResult].
-#' @param ... :: `any`\cr
-#'  Currently not used.
-#'
-#' @return ([BenchmarkResult]).
 #' @export
-as_benchmark_result = function(x, ...) {
-  UseMethod("as_benchmark_result")
+c.BenchmarkResult = function(...) { # nolint
+  bmrs = lapply(list(...), as_benchmark_result)
+  init = BenchmarkResult$new()
+  Reduce(function(lhs, rhs) lhs$combine(rhs), bmrs, init = init)
 }

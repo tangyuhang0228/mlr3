@@ -1,5 +1,3 @@
-context("Learner")
-
 test_that("construction", {
   l = Learner$new("test-learner", task_type = "classif", predict_types = "prob")
   expect_class(l, "Learner")
@@ -27,7 +25,6 @@ test_that("Learners are called with invoke / small footprint of call", {
   expect_true(any(grepl("task$data", call, fixed = TRUE)))
   expect_lt(sum(nchar(call)), 1000)
 })
-
 
 test_that("Extra data slots of learners are kept / reset", {
   task = tsk("boston_housing")
@@ -66,36 +63,34 @@ test_that("learner timings", {
   expect_number(t[["predict"]])
 })
 
-
 test_that("predict on newdata works / classif", {
   task = tsk("iris")$filter(1:120)
   learner = lrn("classif.featureless")
   expect_error(learner$predict(task), "trained")
   learner$train(task)
-  expect_task(learner$state$train_task)
+  expect_task(learner$state$train_task, null_backend_ok = TRUE)
   newdata = tsk("iris")$filter(121:150)$data()
 
   # passing the task
   p = learner$predict_newdata(newdata = newdata, task = task)
   expect_data_table(as.data.table(p), nrows = 30)
-  expect_set_equal(as.data.table(p)$row_id, 1:30)
+  expect_set_equal(as.data.table(p)$row_ids, 1:30)
   expect_factor(p$truth, any.missing = FALSE, levels = task$class_names)
 
   # rely on internally stored task representation
   p = learner$predict_newdata(newdata = newdata, task = NULL)
   expect_data_table(as.data.table(p), nrows = 30)
-  expect_set_equal(as.data.table(p)$row_id, 1:30)
+  expect_set_equal(as.data.table(p)$row_ids, 1:30)
   expect_factor(p$truth, any.missing = FALSE, levels = task$class_names)
 
   # with missing target column
   newdata$Species = NULL
   p = learner$predict_newdata(newdata = newdata, task = task)
   expect_data_table(as.data.table(p), nrows = 30)
-  expect_set_equal(as.data.table(p)$row_id, 1:30)
+  expect_set_equal(as.data.table(p)$row_ids, 1:30)
   expect_factor(p$truth, levels = task$class_names)
   expect_true(allMissing(p$truth))
 })
-
 
 test_that("train task is properly cloned (#383)", {
   lr = lrn("classif.rpart")$train(tsk("iris"))
@@ -117,7 +112,7 @@ test_that("predict on newdata works / regr", {
   p = learner$predict_newdata(newdata)
 
   expect_data_table(as.data.table(p), nrows = length(test))
-  expect_set_equal(as.data.table(p)$row_id, seq_along(test))
+  expect_set_equal(as.data.table(p)$row_ids, seq_along(test))
 })
 
 
@@ -133,41 +128,19 @@ test_that("predict on newdata works / no target column", {
   p = learner$predict_newdata(newdata = newdata)
 
   expect_data_table(as.data.table(p), nrows = length(test))
-  expect_set_equal(as.data.table(p)$row_id, seq_along(test))
+  expect_set_equal(as.data.table(p)$row_ids, seq_along(test))
 })
 
 
 test_that("predict on newdata works / titanic use case", {
-  skip_if_not_installed("titanic")
-  train = load_dataset("titanic_train", package = "titanic")
-  test = load_dataset("titanic_test", package = "titanic")
-  drop = c("Cabin", "Name", "Ticket", "PassengerId")
+  skip_if_not_installed("mlr3data")
+  data("titanic", package = "mlr3data")
+  drop = c("cabin", "name", "ticket", "passenger_id")
+  data = setDT(remove_named(titanic, drop))
+  task = TaskClassif$new(id = "titanic", data[!is.na(survived), ], target = "survived")
 
-  train = remove_named(train, drop)
-  test = remove_named(test, drop)
-
-  train$Embarked = factor(train$Embarked)
-  test$Embarked = factor(test$Embarked, levels = levels(train$Embarked))
-  train$Sex = factor(train$Sex)
-  test$Sex = factor(test$Sex, levels = levels(train$Sex))
-
-  median_age = median(train$Age, na.rm = TRUE)
-  train$Age[is.na(train$Age)] = median_age
-  test$Age[is.na(test$Age)] = median_age
-
-  train$Survived = factor(train$Survived)
-
-  train$Embarked[train$Embarked == ""] = NA
-  train$Embarked = droplevels(train$Embarked)
-  test$Embarked[test$Embarked == ""] = NA
-  test$Embarked = droplevels(test$Embarked)
-
-  task = TaskClassif$new(id = "titanic", train, target = "Survived", positive = "1")
-
-  lrn = lrn("classif.rpart")
-
-  lrn$train(task)
-  p = lrn$predict_newdata(newdata = test)
+  learner = lrn("classif.rpart")$train(task)
+  p = learner$predict_newdata(newdata = data[is.na(survived)])
   expect_prediction_classif(p)
   expect_factor(p$response, levels = task$class_names, any.missing = FALSE)
   expect_factor(p$truth, levels = task$class_names)
@@ -217,4 +190,55 @@ test_that("reset()", {
   expect_list(lrn$state, names = "unique")
   expect_learner(lrn$reset())
   expect_null(lrn$state)
+})
+
+test_that("empty predict set (#421)", {
+  task = tsk("iris")
+  learner = lrn("classif.featureless")
+  resampling = rsmp("holdout", ratio = 1)
+  hout = resampling$instantiate(task)
+  learner$train(task, hout$train_set(1))
+  pred = learner$predict(task, hout$test_set(1))
+  expect_prediction(pred)
+  expect_true(any(grepl("No data to predict on", learner$log$msg)))
+})
+
+test_that("fallback learner is deep cloned (#511)", {
+  l = lrn("classif.rpart")
+  l$fallback = lrn("classif.featureless")
+  expect_different_address(l$fallback, l$clone(deep = TRUE)$fallback)
+})
+
+test_that("learner cannot be trained with TuneToken present", {
+  task = tsk("boston_housing")
+  learner = lrn("regr.rpart", cp = paradox::to_tune(0.1, 0.3))
+  expect_error(learner$train(task),
+    regexp = "<LearnerRegrRpart:regr.rpart> cannot be trained with TuneToken present in hyperparameter: cp",
+    fixed = TRUE)
+})
+
+test_that("integer<->numeric conversion in newdata (#533)", {
+  data = data.table(y = runif(10), x = 1:10)
+  newdata = data.table(y = runif(10), x = 1:10 + 0.1)
+
+  task = TaskRegr$new("test", data, "y")
+  learner = lrn("regr.featureless")
+  learner$train(task)
+  expect_prediction(learner$predict_newdata(data))
+  expect_prediction(learner$predict_newdata(newdata))
+})
+
+test_that("weights", {
+  data = cbind(iris, w = rep(c(1, 100, 1), each = 50))
+  task = TaskClassif$new("weighted_task", data, "Species")
+  task$set_col_roles("w", "weight")
+
+  learner = lrn("classif.rpart")
+  learner$train(task)
+
+  conf = learner$predict(task)$confusion
+  expect_equal(unname(conf[, 2]), c(0, 50, 0)) # no errors in class with weight 100
+
+  expect_prediction(learner$predict_newdata(data[1:3, ]))
+  expect_prediction(learner$predict_newdata(iris[1:3, ]))
 })
